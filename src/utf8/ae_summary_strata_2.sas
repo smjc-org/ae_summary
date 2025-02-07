@@ -1,0 +1,555 @@
+/*
+ * Macro Name:    ae_summary_strata_2
+ * Macro Purpose: 不良事件汇总
+ * Author:        wtwang
+ * Version Date:  2025-02-07 0.1.0
+*/
+
+%macro ae_summary_strata_2(indata,
+                           outdata,
+                           aesoc               = aesoc,
+                           aedecod             = aedecod,
+                           aeseq               = aeseq,
+                           usubjid             = usubjid,
+                           arm                 = #null,
+                           arm_by              = #null,
+                           sort_by             = %str(#FREQ(desc) #TIME(desc)),
+                           at_least            = true,
+                           at_least_text       = %str(至少发生一次AE),
+                           hypothesis          = false,
+                           format_freq         = best12.,
+                           format_rate         = percentn9.2,
+                           format_p            = pvalue6.4,
+                           significance_marker = %str(*),
+                           debug               = false) / parmbuff;
+    /*  indata:              不良事件 ADaM 数据集名称
+     *  outdata:             保存汇总结果的数据集名称
+     *  aesoc:               变量-系统器官分类
+     *  aedecod:             变量-首选术语
+     *  aeseq:               变量-不良事件序号
+     *  usubjid:             变量-受试者唯一编号
+     *  arm:                 变量-试验组别，#null 表示单组
+     *  arm_by:              变量-试验组别的排序方式，可能的取值有：数值型变量、输出格式、#null，#null 表示单组
+     *  sort_by:             汇总结果数据集中观测的排序方式，详细语法参考帮助文档
+     *  at_least:            是否在汇总结果数据集的第一行输出至少发生一次不良事件的统计结果
+     *  at_least_text:       at_least = true 时，汇总结果数据集的第一行显示的描述性文本
+     *  hypothesis:          是否进行假设检验
+     *  format_freq:         例数和例次的输出格式
+     *  format_rate:         率的输出格式
+     *  format_p:            p 值的输出格式
+     *  significance_marker: p 值 < 0.05 的标记字符
+     *  debug:               调试模式
+    */
+
+    /*统一参数大小写*/
+    %let indata              = %sysfunc(strip(%superq(indata)));
+    %let outdata             = %sysfunc(strip(%superq(outdata)));
+    %let aesoc               = %upcase(%sysfunc(strip(%bquote(&aesoc))));
+    %let aedecod             = %upcase(%sysfunc(strip(%bquote(&aedecod))));
+    %let aeseq               = %upcase(%sysfunc(strip(%bquote(&aeseq))));
+    %let usubjid             = %upcase(%sysfunc(strip(%bquote(&usubjid))));
+    %let arm                 = %upcase(%sysfunc(strip(%bquote(&arm))));
+    %let arm_by              = %upcase(%sysfunc(strip(%bquote(&arm_by))));
+    %let sort_by             = %upcase(%sysfunc(strip(%bquote(&sort_by))));
+    %let at_least            = %upcase(%sysfunc(strip(%bquote(&at_least))));
+    %let at_least_text       = %sysfunc(strip(%superq(at_least_text)));
+    %let hypothesis          = %upcase(%sysfunc(strip(%bquote(&hypothesis))));
+    %let format_freq         = %upcase(%sysfunc(strip(%bquote(&format_freq))));
+    %let format_rate         = %upcase(%sysfunc(strip(%bquote(&format_rate))));
+    %let format_p            = %upcase(%sysfunc(strip(%bquote(&format_p))));
+    %let significance_marker = %sysfunc(strip(%bquote(&significance_marker)));
+    %let debug               = %upcase(%sysfunc(strip(%bquote(&debug))));
+
+    /*参数预处理*/
+    /*arm*/
+    %if %superq(arm) = #NULL %then %do;
+        %let arm_n = 0;
+    %end;
+
+    /*arm_by*/
+    %if %superq(arm) ^= #NULL %then %do;
+        %if %superq(arm_by) = #NULL %then %do;
+            %put ERROR: 参数 ARM 不为 #NULL，必须指定 arm_by！;
+            %goto exit;
+        %end;
+        %else %do;
+            %let reg_arm_by_id = %sysfunc(prxparse(%bquote(/^(?:([A-Za-z_][A-Za-z_\d]*)|(?:([A-Za-z_]+(?:\d+[A-Za-z_]+)?)\.))(?:\(\s*((?:DESC|ASC)(?:ENDING)?)\s*\))?$/)));
+            %if %sysfunc(prxmatch(&reg_arm_by_id, %superq(arm_by))) %then %do;
+                %let arm_by_var       = %sysfunc(prxposn(&reg_arm_by_id, 1, %superq(arm_by)));
+                %let arm_by_fmt       = %sysfunc(prxposn(&reg_arm_by_id, 2, %superq(arm_by)));
+                %let arm_by_direction = %sysfunc(prxposn(&reg_arm_by_id, 3, %superq(arm_by)));
+
+                /*检查排序方向*/
+                %if %bquote(&arm_by_direction) = %bquote() %then %do;
+                    %put NOTE: 未指定分组的排序方向，默认升序排列！;
+                    %let arm_by_direction = ASCENDING;
+                %end;
+                %else %if %bquote(&arm_by_direction) = ASC %then %do;
+                    %let arm_by_direction = ASCENDING;
+                %end;
+                %else %if %bquote(&arm_by_direction) = DESC %then %do;
+                    %let arm_by_direction = DESCENDING;
+                %end;
+
+                /*使用排序格式*/
+                %if %bquote(&arm_by_fmt) ^= %bquote() %then %do;
+                    proc sql noprint;
+                        select libname, memname, source into :arm_by_fmt_libname, :arm_by_fmt_memname, :arm_by_fmt_source from dictionary.formats where fmtname = "&arm_by_fmt";
+                    quit;
+
+                    proc format library = &arm_by_fmt_libname..&arm_by_fmt_memname cntlout = tmp_arm_by_fmt;
+                        select &arm_by_fmt;
+                    run;
+
+                    proc sql noprint;
+                        select distinct type into :arm_by_fmt_type from tmp_arm_by_fmt;
+                        create table tmp_arm_sorted as select label, start, end from tmp_arm_by_fmt order by input(start, 8.) &arm_by_direction, input(end, 8.) &arm_by_direction;
+                        select label into :arm_1- from tmp_arm_sorted;
+                        %let arm_n = &sqlobs;
+                    quit;
+                %end;
+
+                /*使用排序变量*/
+                %if %bquote(&arm_by_var) ^= %bquote() %then %do;
+                    proc sql noprint;
+                        create table tmp_arm_sorted as select &arm, &arm_by_var from (select distinct &arm, &arm_by_var from %superq(indata)) order by &arm_by_var &arm_by_direction;
+                        select &arm into :arm_1- from tmp_arm_sorted;
+                    quit;
+                    %let arm_n = &sqlobs;
+                %end;
+            %end;
+            %else %do;
+                %put ERROR: 参数 arm_by = %superq(arm_by) 格式不正确！;
+                %goto exit;
+            %end;
+        %end;
+    %end;
+
+    /*sort_by*/
+    %let reg_sort_by_unit_id = %sysfunc(prxparse(%bquote(/(?:#(G\d+))?#(FREQ|TIME)(?:\((ASC|DESC)(?:ENDING)?\))?/)));
+    %let start = 1;
+    %let stop = %length(&sort_by);
+    %let position = 0;
+    %let length = 0;
+    %let sort_by_part_n = 0;
+    %syscall prxnext(reg_sort_by_unit_id, start, stop, sort_by, position, length);
+    %do %while (&position > 0);
+        %let sort_by_part_n = %eval(&sort_by_part_n + 1);
+        %let sort_by_part_&sort_by_part_n = %substr(&sort_by, &position, &length);
+        %syscall prxnext(reg_sort_by_unit_id, start, stop, sort_by, position, length);
+    %end;
+
+    %if &sort_by_part_n = 0 %then %do;
+        %put ERROR: 参数 sort_by = %superq(sort_by) 格式不正确！;
+        %goto exit;
+    %end;
+    %else %do;
+        %do i = 1 %to &sort_by_part_n;
+            %if %sysfunc(prxmatch(&reg_sort_by_unit_id, &&sort_by_part_&i)) %then %do;
+                %let sort_by_part_&i._arm       = %sysfunc(prxposn(&reg_sort_by_unit_id, 1, &&sort_by_part_&i)); /*根据哪个组别排序*/
+                %let sort_by_part_&i._stat      = %sysfunc(prxposn(&reg_sort_by_unit_id, 2, &&sort_by_part_&i)); /*根据什么统计量排序*/
+                %let sort_by_part_&i._direction = %sysfunc(prxposn(&reg_sort_by_unit_id, 3, &&sort_by_part_&i)); /*排序方向*/
+
+                %if &&sort_by_part_&i._arm = %bquote() %then %do;
+                    %let sort_by_part_&i._arm = ALL;
+                %end;
+                %else %do;
+                    %if %substr(&&sort_by_part_&i._arm, 2) > &arm_n %then %do;
+                        %put ERROR: 排序规则 &&sort_by_part_&i 指定了不存在的组别！;
+                        %goto exit;
+                    %end;
+                %end;
+
+                %let sort_by_part_&i._direction = &&sort_by_part_&i._direction.ENDING;
+            %end;
+        %end;
+    %end;
+
+    /*hypothesis*/
+    %if %superq(hypothesis) = TRUE %then %do;
+        %if &arm_n < 2 %then %do;
+            %put ERROR: 单组试验无法进行假设检验！;
+            %goto exit;
+        %end;
+    %end;
+
+
+    /*复制 indata*/
+    data tmp_indata;
+        set %superq(indata);
+    run;
+
+    /*创建各组别子集数据集，计算受试者数量*/
+    proc sql noprint;
+        select count(distinct usubjid) into :subj_n from tmp_indata;
+        %do i = 1 %to &arm_n;
+            create table tmp_indata_arm_&i as select * from tmp_indata where &arm = %unquote(%str(%')%superq(arm_&i)%str(%'));
+            select count(distinct usubjid) into :arm_&i._subj_n from tmp_indata_arm_&i;
+        %end;
+    quit;
+
+    /*创建宏变量，存储 aesoc, aedecod 各水平名称*/
+    proc sql noprint;
+        select distinct &aesoc into :&aesoc._1- from tmp_indata where not missing(&aeseq);
+        %let &aesoc._n = &sqlobs;
+        %do i = 1 %to &&&aesoc._n;
+            select distinct &aedecod into :&aesoc._&i._&aedecod._1- from tmp_indata where not missing(&aeseq) and &aesoc = "&&aesoc_&i";
+            %let &aesoc._&i._&aedecod._n = &sqlobs;
+        %end;
+    quit;
+
+    /*计算 aesoc, aedecod 值的最大长度*/
+    %let &aesoc._len_max   = 0;
+    %let &aedecod._len_max = 0;
+    %do i = 1 %to &&&aesoc._n;
+        %let &aesoc._len_max = %sysfunc(max(%length(&&&aesoc._&i), &&&aesoc._len_max));
+        %do j = 1 %to &&&aesoc._&i._&aedecod._n;
+            %let &aedecod._len_max = %sysfunc(max(%length(&&&aesoc._&i._&aedecod._&j), &&&aedecod._len_max));
+        %end;
+    %end;
+
+    /*获取 aesoc 和 aedecod 的标签*/
+    proc sql noprint;
+        select label into :&aesoc._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and name = "&aesoc";
+        select label into :&aedecod._label trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and name = "&aedecod";
+    quit;
+
+    /*创建基数据集*/
+    data tmp_base;
+        length AT_LEAST            $%length(%superq(at_least_text))
+               AT_LEAST_FLAG       8
+               &aesoc              $&&&aesoc._len_max
+               &aesoc._FLAG        8
+               &aedecod            $&&&aedecod._len_max
+               &aedecod._FLAG      8
+               %do i = 1 %to &arm_n;
+                   &aesoc._G&i._FREQ   8
+                   &aesoc._G&i._TIME   8
+                   &aedecod._G&i._FREQ 8
+                   &aedecod._G&i._TIME 8
+                   G&i._FREQ           8
+                   G&i._TIME           8
+                   G&i._RATE           8
+               %end;
+               &aesoc._ALL_FREQ    8
+               &aesoc._ALL_TIME    8
+               &aedecod._ALL_FREQ  8
+               &aedecod._ALL_TIME  8
+               ALL_FREQ            8
+               ALL_TIME            8
+               ALL_RATE            8
+               ;
+        label AT_LEAST       = %unquote(%str(%')%superq(at_least_text)%str(%'))
+              AT_LEAST_FLAG  = %unquote(%str(%')%superq(at_least_text)（FLAG）%str(%'))
+              &aesoc         = %unquote(%str(%')%superq(&aesoc._label)%str(%'))
+              &aesoc._FLAG   = %unquote(%str(%')%superq(&aesoc._label)（FLAG）%str(%'))
+              &aedecod       = %unquote(%str(%')%superq(&aedecod._label)%str(%'))
+              &aedecod._FLAG = %unquote(%str(%')%superq(&aedecod._label)（FLAG）%str(%'))
+              %do i = 1 %to &arm_n;
+                  &aesoc._G&i._FREQ   = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例数）%str(%'))
+                  &aesoc._G&i._TIME   = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例次）%str(%'))
+                  &aedecod._G&i._FREQ = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例数）%str(%'))
+                  &aedecod._G&i._TIME = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例次）%str(%'))
+                  G&i._FREQ           = %unquote(%str(%')%superq(arm_&i)-例数%str(%'))
+                  G&i._TIME           = %unquote(%str(%')%superq(arm_&i)-例次%str(%'))
+                  G&i._RATE           = %unquote(%str(%')%superq(arm_&i)-率%str(%'))
+              %end;
+              &aesoc._ALL_FREQ   = %unquote(%str(%')%superq(&aesoc._label)（合计-例数）%str(%'))
+              &aesoc._ALL_TIME   = %unquote(%str(%')%superq(&aesoc._label)（合计-例次）%str(%'))
+              &aedecod._ALL_FREQ = %unquote(%str(%')%superq(&aedecod._label)（合计-例数）%str(%'))
+              &aedecod._ALL_TIME = %unquote(%str(%')%superq(&aedecod._label)（合计-例次）%str(%'))
+              ALL_FREQ           = %unquote(%str(%')合计-例数%str(%'))
+              ALL_TIME           = %unquote(%str(%')合计-例次%str(%'))
+              ALL_RATE           = %unquote(%str(%')合计-率%str(%'))
+              ;
+
+        %do i = 1 %to &arm_n;
+            &aesoc._G&i._FREQ   = .;
+            &aesoc._G&i._TIME   = .;
+            &aedecod._G&i._FREQ = .;
+            &aedecod._G&i._TIME = .;
+            G&i._FREQ           = .;
+            G&i._TIME           = .;
+            G&i._RATE           = .;
+        %end;
+        &aesoc._ALL_FREQ   = .;
+        &aesoc._ALL_TIME   = .;
+        &aedecod._ALL_FREQ = .;
+        &aedecod._ALL_TIME = .;
+        ALL_FREQ           = .;
+        ALL_TIME           = .;
+        ALL_RATE           = .;
+
+        %do i = 1 %to &&&aesoc._n;
+            AT_LEAST       = "";
+            AT_LEAST_FLAG  = 0;
+            &aesoc         = "&&&aesoc._&i";
+            &aesoc._FLAG   = 1;
+            &aedecod       = "";
+            &aedecod._FLAG = .;
+            output;
+            %do j = 1 %to &&&aesoc._&i._&aedecod._n;
+                AT_LEAST       = "";
+                AT_LEAST_FLAG  = 0;
+                &aesoc         = "&&&aesoc._&i";
+                &aesoc._FLAG   = 0;
+                &aedecod       = "&&&aesoc._&i._&aedecod._&j";
+                &aedecod._FLAG = 1;
+                output;
+            %end;
+        %end;
+    run;
+
+    /*统计至少发生一次不良事件的例数和例次*/
+    %if %superq(at_least) = TRUE %then %do;
+        proc sql noprint;
+            create table tmp_desc_at_least like tmp_base;
+            insert into tmp_desc_at_least
+                set AT_LEAST = %unquote(%str(%')%superq(at_least_text)%str(%')),
+                    AT_LEAST_FLAG = 1,
+                    %do i = 1 %to &arm_n;
+                        &aesoc._G&i._FREQ   = (select count(distinct &usubjid) from tmp_indata_arm_&i where not missing(&aeseq)),
+                        &aesoc._G&i._TIME   = (select count(&usubjid)          from tmp_indata_arm_&i where not missing(&aeseq)),
+                    %end;
+                    &aesoc._ALL_FREQ   = (select count(distinct &usubjid) from tmp_indata where not missing(&aeseq)),
+                    &aesoc._ALL_TIME   = (select count(&usubjid)          from tmp_indata where not missing(&aeseq))
+                    ;
+            update tmp_desc_at_least
+                set %do i = 1 %to &arm_n;
+                        &aedecod._G&i._FREQ = &aesoc._G&i._FREQ,
+                        &aedecod._G&i._TIME = &aesoc._G&i._TIME,
+                        G&i._FREQ           = &aesoc._G&i._FREQ,
+                        G&i._TIME           = &aesoc._G&i._TIME,
+                    %end;
+                    &aedecod._ALL_FREQ = &aesoc._ALL_FREQ,
+                    &aedecod._ALL_TIME = &aesoc._ALL_TIME,
+                    ALL_FREQ           = &aesoc._ALL_FREQ,
+                    ALL_TIME           = &aesoc._ALL_TIME
+                    ;
+            update tmp_desc_at_least
+                set %do i = 1 %to &arm_n;
+                        G&i._RATE = G&i._FREQ / &&arm_&i._subj_n,
+                    %end;
+                    ALL_RATE = ALL_FREQ / &subj_n
+                    ;
+        quit;
+    %end;
+
+    /*统计各组和合计发生的不良事件的例数和例次*/
+    proc sql noprint;
+        create table tmp_desc_arm as select * from tmp_base;
+        update tmp_desc_arm
+            set %do i = 1 %to &arm_n;
+                    &aesoc._G&i._FREQ   = (select count(distinct &usubjid) from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc),
+                    &aesoc._G&i._TIME   = (select count(&usubjid)          from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc),
+                    &aedecod._G&i._FREQ = (select count(distinct &usubjid) from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc and tmp_indata_arm_&i..&aedecod = tmp_desc_arm.&aedecod),
+                    &aedecod._G&i._TIME = (select count(&usubjid)          from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc and tmp_indata_arm_&i..&aedecod = tmp_desc_arm.&aedecod),
+                %end;
+                &aesoc._ALL_FREQ   = (select count(distinct &usubjid) from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc),
+                &aesoc._ALL_TIME   = (select count(&usubjid)          from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc),
+                &aedecod._ALL_FREQ = (select count(distinct &usubjid) from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc and tmp_indata.&aedecod = tmp_desc_arm.&aedecod),
+                &aedecod._ALL_TIME = (select count(&usubjid)          from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc and tmp_indata.&aedecod = tmp_desc_arm.&aedecod)
+                ;
+        update tmp_desc_arm
+            set %do i = 1 %to &arm_n;
+                    G&i._FREQ           = ifn(&aesoc._FLAG = 1, &aesoc._G&i._FREQ, ifn(&aedecod._FLAG = 1, &aedecod._G&i._FREQ, .)),
+                    G&i._TIME           = ifn(&aesoc._FLAG = 1, &aesoc._G&i._TIME, ifn(&aedecod._FLAG = 1, &aedecod._G&i._TIME, .)),
+                %end;
+                ALL_FREQ           = ifn(&aesoc._FLAG = 1, &aesoc._ALL_FREQ, ifn(&aedecod._FLAG = 1, &aedecod._ALL_FREQ, .)),
+                ALL_TIME           = ifn(&aesoc._FLAG = 1, &aesoc._ALL_TIME, ifn(&aedecod._FLAG = 1, &aedecod._ALL_TIME, .))
+                ;
+        update tmp_desc_arm
+            set %do i = 1 %to &arm_n;
+                    G&i._RATE = G&i._FREQ / &&arm_&i._subj_n,
+                %end;
+                ALL_RATE = ALL_FREQ / &subj_n
+                ;
+    quit;
+
+    /*合并 <tmp_desc_at_least> 和 tmp_desc_arm*/
+    data tmp_desc;
+        set %if %superq(at_least) = TRUE %then %do;
+                tmp_desc_at_least
+            %end;
+                tmp_desc_arm;
+    run;
+
+    /*计算 P 值*/
+    %if %superq(hypothesis) = TRUE %then %do;
+        proc transpose data = tmp_desc out = tmp_contigency_subset_pos label = ARM;
+            var %do i = 1 %to &arm_n; G&i._FREQ %end;;
+            by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
+        run;
+
+        data tmp_contigency;
+            set tmp_contigency_subset_pos(rename = (COL1 = FREQ));
+            ARM = kscan(ARM, 1, "-");
+            by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
+
+            length STATUS $12;
+            STATUS = "EXPOSED";
+            output;
+            %do i = 1 %to &arm_n;
+                if _NAME_ = "G&i._FREQ" then FREQ = &&arm_&i._subj_n - FREQ;
+            %end;
+            STATUS = "NOT EXPOSED";
+            output;
+        run;
+
+        ods html close;
+        ods output ChiSq        = tmp_chisq(where = (Statistic = "卡方"))
+                   FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
+        proc freq data = tmp_contigency;
+            tables ARM * STATUS /chisq(warn = output);
+            exact fisher;
+            weight FREQ /zeros;
+            by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
+        run;
+        ods html;
+
+        data tmp_summary;
+            merge tmp_desc
+                  tmp_chisq(keep = Value Prob Warning rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING))
+                  tmp_fishers_exact(keep = nValue1 rename = (nValue1 = FISHER_PVALUE));
+            PVALUE = ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE);
+
+            label CHISQ         = "卡方统计量"
+                  CHISQ_PVALUE  = "卡方检验 P 值"
+                  CHISQ_WARNING = "卡方警告"
+                  FISHER_PVALUE = "精确检验 P 值"
+                  PVALUE        = "P 值"
+                  ;
+        run;
+    %end;
+    %else %do;
+        data tmp_summary;
+            set tmp_desc;
+        run;
+    %end;
+
+    /*应用 format*/
+    proc sql noprint;
+        create table tmp_summary_formated as
+            select
+                *,
+                (case when AT_LEAST_FLAG  = 1 then AT_LEAST
+                      when &aesoc._FLAG   = 1 then &aesoc
+                      when &aedecod._FLAG = 1 then "    " || &aedecod
+                      else ""
+                end)                                                                                       as ITEM,
+                %do i = 1 %to &arm_n;
+                    kstrip(put(G&i._RATE, &format_rate))                                                   as G&i._RATE_FMT,
+                    kstrip(put(G&i._FREQ, &format_freq)) || "(" || kstrip(calculated G&i._RATE_FMT) || ")" as G&i._VALUE1,
+                    kstrip(put(G&i._TIME, &format_freq))                                                   as G&i._VALUE2,
+                %end;
+                kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT,
+                kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1,
+                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2
+                %if %superq(hypothesis) = TRUE %then %do;
+                    %bquote(,)
+                    kstrip(put(PVALUE, &format_p)) || ifc(PVALUE < 0.05, "&significance_marker", "")       as PVALUE_FMT
+                %end;
+            from tmp_summary;
+    quit;
+
+    /*排序*/
+    proc sql noprint sortseq = linguistic;
+        create table tmp_summary_formated_sorted as
+            select * from tmp_summary_formated
+            order by AT_LEAST_FLAG descending,
+                     %do i = 1 %to &sort_by_part_n;
+                         &aesoc._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
+                     %end;
+                     &aesoc,
+                     &aesoc._FLAG descending,
+                     %do i = 1 %to &sort_by_part_n;
+                         &aedecod._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
+                     %end;
+                     &aedecod
+                     ;
+    quit;
+
+    /*输出数据集*/
+    data &outdata;
+        set tmp_summary_formated_sorted;
+        keep ITEM
+             %do i = 1 %to &arm_n;
+                 G&i._VALUE1
+                 G&i._VALUE2
+             %end;
+             ALL_VALUE1
+             ALL_VALUE2
+             %if %superq(hypothesis) = TRUE %then %do;
+                PVALUE_FMT
+             %end;
+             ;
+    run;
+
+    /*删除中间数据集*/
+    %if %bquote(&debug) = %upcase(false) %then %do;
+        proc datasets library = work nowarn noprint;
+            delete tmp_arm_by_fmt
+                   tmp_arm_sorted
+                   tmp_indata
+                   %do i = 1 %to &arm_n;
+                       tmp_indata_arm_&i
+                   %end;
+                   tmp_base
+                   tmp_desc_at_least
+                   tmp_desc_arm
+                   tmp_desc
+                   tmp_contigency_subset_pos
+                   tmp_contigency
+                   tmp_chisq
+                   tmp_fishers_exact
+                   tmp_summary
+                   tmp_summary_formated
+                   tmp_summary_formated_sorted
+                   ;
+        quit;
+    %end;
+
+    %exit:
+    %put NOTE: 宏程序 ae_summary_strata_2 已结束运行！;
+%mend;
+
+proc format;
+    /*率*/
+    picture srate(round)
+            low - < -1 = '#ERROR'(noedit)
+            -1         = '-100.0'(noedit)
+            -1 < - < 0 = '-09.9'(multiplier = 1000 prefix = '-')
+            0 - < 1    = '09.9'(multiplier = 1000)
+            1          = '100.0'(noedit)
+            1 < - high = '#ERROR'(noedit);
+    /*检验统计量*/
+    picture sstat(round)
+            0          = '0.0000'(noedit)
+            0 < - high = '09.9999'
+            low - < 0  = '009.9999'(prefix = '-');
+    /*P值*/
+    picture spvalue(round  max = 6)
+        low - < 0.0001 = '<0.0001'(noedit)
+        other          = '9.9999';
+run;
+
+proc format;
+    value armn
+        1 = "试验组"
+        2 = "对照组";
+quit;
+
+data analysis;
+    merge adam.adsl adam.adae;
+    by usubjid;
+    if saffl = "Y";
+run;
+
+%ae_summary_strata_2(indata = analysis, outdata = out_ae,  sort_by = %str(#G#FREQ(descending) #G#TIME(desc)), at_least_text = %str(至少发生一次不良事件), format_rate = srate., format_p = spvalue., debug = true);
+
+
+/*
+options symbolgen mlogic mprint;
+%ae_summary_strata_2(indata = analysis, outdata = out_ae,  sort_by = %str(#G#FREQ(descending) #G#TIME(desc)), at_least = false, format_rate = srate., format_p = spvalue.);
+options nosymbolgen nomlogic nomprint;
+*/
