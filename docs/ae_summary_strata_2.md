@@ -250,7 +250,7 @@ arm_by = armn.
 > [!IMPORTANT]
 >
 > - 单组试验不能指定 #G*number*
-> - #G*number* 中的 _number_ 值不能超出 [arm_by](#arm_by) 可获取范围的数值
+> - #G*number* 中的 _number_ 值不能超出由 [arm](#arm) 和 [arm_by](#arm_by) 限定的组别数量
 
 **Default** : `#FREQ(desc) #TIME(desc)`
 
@@ -318,7 +318,8 @@ unencoded_text = %str(未编码)
 
 > [!NOTE]
 >
-> 当仅有一个组别时，无法进行假设检验。
+> 当只有一个组别时，无法进行假设检验。
+> 当有两个或多个组别时，将进行卡方检验，若卡方检验不适用，则进行 Fisher 精确检验。
 
 **Default** : `true`
 
