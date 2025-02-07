@@ -442,18 +442,18 @@
                       when &aesoc._FLAG   = 1 then &aesoc
                       when &aedecod._FLAG = 1 then "    " || &aedecod
                       else ""
-                end)                                                                                       as ITEM,
+                end)                                                                                       as ITEM          label = "项目",
                 %do i = 1 %to &arm_n;
-                    kstrip(put(G&i._RATE, &format_rate))                                                   as G&i._RATE_FMT,
-                    kstrip(put(G&i._FREQ, &format_freq)) || "(" || kstrip(calculated G&i._RATE_FMT) || ")" as G&i._VALUE1,
-                    kstrip(put(G&i._TIME, &format_freq))                                                   as G&i._VALUE2,
+                    kstrip(put(G&i._RATE, &format_rate))                                                   as G&i._RATE_FMT label = %unquote(%str(%')%superq(arm_&i)-率（C）%str(%')),
+                    kstrip(put(G&i._FREQ, &format_freq)) || "(" || kstrip(calculated G&i._RATE_FMT) || ")" as G&i._VALUE1   label = %unquote(%str(%')%superq(arm_&i)-例数（率）%str(%')),
+                    kstrip(put(G&i._TIME, &format_freq))                                                   as G&i._VALUE2   label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')),
                 %end;
-                kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT,
-                kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1,
-                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2
+                kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT  label = %unquote(%str(%')合计-率（C）%str(%')),
+                kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1    label = %unquote(%str(%')合计-例数（率）%str(%')),
+                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%'))
                 %if %superq(hypothesis) = TRUE %then %do;
                     %bquote(,)
-                    kstrip(put(PVALUE, &format_p)) || ifc(PVALUE < 0.05, "&significance_marker", "")       as PVALUE_FMT
+                    kstrip(put(PVALUE, &format_p)) || ifc(PVALUE < 0.05, "&significance_marker", "")       as PVALUE_FMT    label = "P值"
                 %end;
             from tmp_summary;
     quit;
