@@ -214,9 +214,9 @@ arm = arm
 >
 > 3. `asc`, `ascending` 表示正向排序，`desc`, `descending` 表示逆向排序。
 
-**Default** : `#null`
+**Default** : `%nrstr(&arm)`
 
-默认情况下，将 [indata](#indata) 视为单组试验的数据集进行汇总。
+默认情况下，若 `arm = #null`，则将 [indata](#indata) 视为单组试验的数据集进行汇总，此时无需排序；若 `arm = ` _variable_，则根据 [arm](#arm) 自身的值排序。
 
 **Usage** :
 
