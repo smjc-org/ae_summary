@@ -12,7 +12,7 @@
                            aeseq               = aeseq,
                            usubjid             = usubjid,
                            arm                 = #null,
-                           arm_by              = #null,
+                           arm_by              = %nrstr(&arm),
                            sort_by             = %str(#FREQ(desc) #TIME(desc)),
                            at_least            = true,
                            at_least_text       = %str(至少发生一次AE),
@@ -94,7 +94,7 @@
                     %let arm_by_direction = DESCENDING;
                 %end;
 
-                /*使用排序格式*/
+                /*使用格式排序*/
                 %if %bquote(&arm_by_fmt) ^= %bquote() %then %do;
                     proc sql noprint;
                         select libname, memname, source into :arm_by_fmt_libname, :arm_by_fmt_memname, :arm_by_fmt_source from dictionary.formats where fmtname = "&arm_by_fmt";
@@ -105,17 +105,30 @@
                     run;
 
                     proc sql noprint;
-                        select distinct type into :arm_by_fmt_type from tmp_arm_by_fmt;
-                        create table tmp_arm_sorted as select label, start, end from tmp_arm_by_fmt order by input(start, 8.) &arm_by_direction, input(end, 8.) &arm_by_direction;
+                        create table tmp_arm_sorted as
+                            select
+                                label,
+                                (case when start = "LOW"  then -constant("BIG")
+                                      when start = "HIGH" then  constant("BIG")
+                                      else input(strip(start), 8.)
+                                end)             as arm_by_fmt_start,
+                                (case when end = "LOW"  then -constant("BIG")
+                                      when end = "HIGH" then  constant("BIG")
+                                      else input(strip(end), 8.)
+                                end)             as arm_by_fmt_end
+                            from tmp_arm_by_fmt
+                            order by arm_by_fmt_start &arm_by_direction, arm_by_fmt_end &arm_by_direction;
                         select label into :arm_1- from tmp_arm_sorted;
                         %let arm_n = &sqlobs;
                     quit;
                 %end;
 
-                /*使用排序变量*/
+                /*使用变量排序*/
                 %if %bquote(&arm_by_var) ^= %bquote() %then %do;
+                    proc sort data = %superq(indata) out = tmp_arm_sorted nodupkey;
+                        by %if &arm_by_direction = DESCENDING %then %do; DESCENDING %end; &arm_by_var;
+                    run;
                     proc sql noprint;
-                        create table tmp_arm_sorted as select &arm, &arm_by_var from (select distinct &arm, &arm_by_var from %superq(indata)) order by &arm_by_var &arm_by_direction;
                         select &arm into :arm_1- from tmp_arm_sorted;
                     quit;
                     %let arm_n = &sqlobs;
