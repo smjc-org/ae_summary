@@ -24,6 +24,7 @@
 - [sort_by](#sort_by)
 - [at_least](#at_least)
 - [at_least_text](#at_least_text)
+- [unencoded_text]()
 - [hypothesis](#hypothesis)
 - [format_freq](#format_freq)
 - [format_rate](#format_rate)
@@ -139,6 +140,10 @@ aedecod = aept
 **Syntax** : _variable_
 
 指定变量 `不良事件序号` 。
+
+> [!IMPORTANT]
+>
+> 对于发生了不良事件的观测，`aeseq` 不能是缺失值，但 [aesoc](#aesoc) 和 [aedecod](#aedecod) 可以是缺失值。
 
 **Default** : `aeseq`
 
@@ -285,6 +290,22 @@ at_least = false
 
 ```sas
 at_least_text = %str(至少发生一次不良事件)
+```
+
+---
+
+#### unencoded_text
+
+**Syntax** : _string_
+
+指定当出现未编码的不良事件（[aesoc](#aesoc) 或 [aedecod](#aedecod) 缺失）时，[outdata](#outdata) 显示的替代字符串。
+
+**Default** : `未编码`
+
+**Usage** :
+
+```sas
+unencoded_text = %str(未编码)
 ```
 
 ---

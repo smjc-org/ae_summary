@@ -16,6 +16,7 @@
                            sort_by             = %str(#FREQ(desc) #TIME(desc)),
                            at_least            = true,
                            at_least_text       = %str(至少发生一次AE),
+                           unencoded_text      = %str(未编码),
                            hypothesis          = false,
                            format_freq         = best12.,
                            format_rate         = percentn9.2,
@@ -33,6 +34,7 @@
      *  sort_by:             汇总结果数据集中观测的排序方式，详细语法参考帮助文档
      *  at_least:            是否在汇总结果数据集的第一行输出至少发生一次不良事件的统计结果
      *  at_least_text:       at_least = true 时，汇总结果数据集的第一行显示的描述性文本
+     *  unencoded_text       不良事件未编码，即 aesoc, aedecod 缺失时，汇总结果数据集中显示的替代字符串
      *  hypothesis:          是否进行假设检验
      *  format_freq:         例数和例次的输出格式
      *  format_rate:         率的输出格式
@@ -53,6 +55,7 @@
     %let sort_by             = %upcase(%sysfunc(strip(%bquote(&sort_by))));
     %let at_least            = %upcase(%sysfunc(strip(%bquote(&at_least))));
     %let at_least_text       = %sysfunc(strip(%superq(at_least_text)));
+    %let unencoded_text      = %sysfunc(strip(%superq(unencoded_text)));
     %let hypothesis          = %upcase(%sysfunc(strip(%bquote(&hypothesis))));
     %let format_freq         = %upcase(%sysfunc(strip(%bquote(&format_freq))));
     %let format_rate         = %upcase(%sysfunc(strip(%bquote(&format_rate))));
@@ -177,6 +180,9 @@
     /*复制 indata*/
     data tmp_indata;
         set %superq(indata);
+
+        if not missing(&aeseq) and missing(&aesoc)   then &aesoc   = %unquote(%str(%')%superq(unencoded_text)%str(%'));
+        if not missing(&aeseq) and missing(&aedecod) then &aedecod = %unquote(%str(%')%superq(unencoded_text)%str(%'));
     run;
 
     /*创建各组别子集数据集，计算受试者数量*/
@@ -193,14 +199,14 @@
         select distinct &aesoc into :&aesoc._1- from tmp_indata where not missing(&aeseq);
         %let &aesoc._n = &sqlobs;
         %do i = 1 %to &&&aesoc._n;
-            select distinct &aedecod into :&aesoc._&i._&aedecod._1- from tmp_indata where not missing(&aeseq) and &aesoc = "&&aesoc_&i";
+            select distinct &aedecod into :&aesoc._&i._&aedecod._1- from tmp_indata where not missing(&aeseq) and &aesoc = "&&&aesoc._&i";
             %let &aesoc._&i._&aedecod._n = &sqlobs;
         %end;
     quit;
 
     /*计算 aesoc, aedecod 值的最大长度*/
-    %let &aesoc._len_max   = 0;
-    %let &aedecod._len_max = 0;
+    %let &aesoc._len_max   = 1;
+    %let &aedecod._len_max = 1;
     %do i = 1 %to &&&aesoc._n;
         %let &aesoc._len_max = %sysfunc(max(%length(&&&aesoc._&i), &&&aesoc._len_max));
         %do j = 1 %to &&&aesoc._&i._&aedecod._n;
