@@ -125,7 +125,7 @@
 
                 /*使用变量排序*/
                 %if %bquote(&arm_by_var) ^= %bquote() %then %do;
-                    proc sort data = %superq(indata) out = tmp_arm_sorted nodupkey;
+                    proc sort data = %superq(indata) out = tmp_arm_sorted(keep = &arm) nodupkey;
                         by %if &arm_by_direction = DESCENDING %then %do; DESCENDING %end; &arm_by_var;
                     run;
                     proc sql noprint;
