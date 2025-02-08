@@ -212,10 +212,13 @@
 
     /*创建宏变量，存储 aesoc, aedecod 各水平名称*/
     proc sql noprint;
-        select distinct &aesoc into :&aesoc._1- from tmp_indata where not missing(&aeseq);
+        create table tmp_indata_subset as select * from tmp_indata where &arm in (%do i = 1 %to &arm_n;
+                                                                                      %unquote(%str(%')%superq(arm_&i)%str(%'))
+                                                                                  %end;);
+        select distinct &aesoc into :&aesoc._1- from tmp_indata_subset where not missing(&aeseq);
         %let &aesoc._n = &sqlobs;
         %do i = 1 %to &&&aesoc._n;
-            select distinct &aedecod into :&aesoc._&i._&aedecod._1- from tmp_indata where not missing(&aeseq) and &aesoc = "&&&aesoc._&i";
+            select distinct &aedecod into :&aesoc._&i._&aedecod._1- from tmp_indata_subset where not missing(&aeseq) and &aesoc = "&&&aesoc._&i";
             %let &aesoc._&i._&aedecod._n = &sqlobs;
         %end;
     quit;
@@ -519,6 +522,7 @@
                    %do i = 1 %to &arm_n;
                        tmp_indata_arm_&i
                    %end;
+                   tmp_indata_subset
                    tmp_base
                    tmp_desc_at_least
                    tmp_desc_arm
