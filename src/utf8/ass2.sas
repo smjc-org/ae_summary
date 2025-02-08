@@ -267,7 +267,7 @@
                 ALL_TIME                num(8)                                label = %unquote(%str(%')合计-例次%str(%')),
                 ALL_RATE                num(8)                                label = %unquote(%str(%')合计-率%str(%'))
             );
-        
+
         %do i = 1 %to &&&aesoc._n;
             insert into tmp_base
                 set AT_LEAST       = "",
@@ -275,14 +275,14 @@
                     &aesoc         = "&&&aesoc._&i",
                     &aesoc._FLAG   = 1,
                     &aedecod       = "",
-                    &aedecod._FLAG = .
+                    &aedecod._FLAG = 0
                     ;
             %do j = 1 %to &&&aesoc._&i._&aedecod._n;
                 insert into tmp_base
                     set AT_LEAST       = "",
                         AT_LEAST_FLAG  = 0,
                         &aesoc         = "&&&aesoc._&i",
-                        &aesoc._FLAG   = 0,
+                        &aesoc._FLAG   = 1,
                         &aedecod       = "&&&aesoc._&i._&aedecod._&j",
                         &aedecod._FLAG = 1
                         ;
@@ -295,8 +295,10 @@
         proc sql noprint;
             create table tmp_desc_at_least like tmp_base;
             insert into tmp_desc_at_least
-                set AT_LEAST = %unquote(%str(%')%superq(at_least_text)%str(%')),
-                    AT_LEAST_FLAG = 1,
+                set AT_LEAST       = %unquote(%str(%')%superq(at_least_text)%str(%')),
+                    AT_LEAST_FLAG  = 1,
+                    &aesoc._FLAG   = 0,
+                    &aedecod._FLAG = 0,
                     %do i = 1 %to &arm_n;
                         &aesoc._G&i._FREQ   = (select count(distinct &usubjid) from tmp_indata_arm_&i where not missing(&aeseq)),
                         &aesoc._G&i._TIME   = (select count(&usubjid)          from tmp_indata_arm_&i where not missing(&aeseq)),
@@ -462,9 +464,10 @@
             select
                 *,
                 (case when AT_LEAST_FLAG  = 1 then AT_LEAST
-                      when &aesoc._FLAG   = 1 then &aesoc
-                      when &aedecod._FLAG = 1 then "    " || &aedecod
-                      else ""
+                      when &aesoc._FLAG   = 1 then
+                      (case when &aedecod._FLAG = 0 then &aesoc
+                            when &aedecod._FLAG = 1 then "    " || &aedecod
+                      end)
                 end)                                                                                       as ITEM          label = "项目",
                 %do i = 1 %to &arm_n;
                     kstrip(put(G&i._RATE, &format_rate))                                                   as G&i._RATE_FMT label = %unquote(%str(%')%superq(arm_&i)-率（C）%str(%')),
@@ -486,11 +489,12 @@
         create table tmp_summary_formated_sorted as
             select * from tmp_summary_formated
             order by AT_LEAST_FLAG descending,
+                     &aesoc._FLAG,
                      %do i = 1 %to &sort_by_part_n;
                          &aesoc._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
                      %end;
                      &aesoc,
-                     &aesoc._FLAG descending,
+                     &aedecod._FLAG,
                      %do i = 1 %to &sort_by_part_n;
                          &aedecod._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
                      %end;
