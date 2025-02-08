@@ -272,24 +272,14 @@
                 ALL_RATE                num(8)                                label = %unquote(%str(%')合计-率%str(%'))
             );
 
-        %do i = 1 %to &&&aesoc._n;
-            insert into tmp_base
-                set AT_LEAST       = "",
-                    &aesoc         = "&&&aesoc._&i",
-                    &aesoc._FLAG   = 1,
-                    &aedecod       = "",
-                    &aedecod._FLAG = 0
-                    ;
-            %do j = 1 %to &&&aesoc._&i._&aedecod._n;
-                insert into tmp_base
-                    set AT_LEAST       = "",
-                        &aesoc         = "&&&aesoc._&i",
-                        &aesoc._FLAG   = 1,
-                        &aedecod       = "&&&aesoc._&i._&aedecod._&j",
-                        &aedecod._FLAG = 1
-                        ;
+        insert into tmp_base(AT_LEAST, &aesoc, &aesoc._FLAG, &aedecod, &aedecod._FLAG)
+            %do i = 1 %to &&&aesoc._n;
+                values ("", "&&&aesoc._&i", 1, "", 0)
+                %do j = 1 %to &&&aesoc._&i._&aedecod._n;
+                    values ("", "&&&aesoc._&i", 1, "&&&aesoc._&i._&aedecod._&j", 1)
+                %end;
             %end;
-        %end;
+            ;
     quit;
 
     /*统计至少发生一次不良事件的例数和例次*/
