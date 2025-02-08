@@ -24,6 +24,7 @@
 - [sort_by](#sort_by)
 - [at_least](#at_least)
 - [at_least_text](#at_least_text)
+- [at_least_output_if_zero](#at_least_output_if_zero)
 - [unencoded_text]()
 - [hypothesis](#hypothesis)
 - [format_freq](#format_freq)
@@ -94,6 +95,25 @@ indata = analysis
 **Syntax** : _data-set-name_<(_data-set-option_)>
 
 指定保存汇总结果的数据集，可使用数据集选项。
+
+汇总结果的数据集包含以下变量：
+
+| 变量名       | 含义                       |
+| ------------ | -------------------------- |
+| ITEM         | 系统器官分类、首选术语名称 |
+| G*x*\_VALUE1 | 组别 _x_ 例数（率）        |
+| G*x*\_VALUE2 | 组别 _x_ 例次              |
+| ALL_VALUE1   | 合计例数（率）             |
+| ALL_VALUE2   | 合计例次                   |
+| PVALUE_FMT   | P 值                       |
+
+> [!NOTE]
+>
+> 变量 `PVALUE_FMT` 仅在指定 [hypothesis](#hypothesis) = `true` 时才会输出。
+
+> [!TIP]
+>
+> 如果不需要输出合计汇总结果，可指定数据集选项 `drop = ALL_:`。
 
 **Usage** :
 
@@ -294,6 +314,20 @@ at_least_text = %str(至少发生一次不良事件)
 
 ---
 
+#### at_least_output_if_zero
+
+**Syntax** : `true` | `false`
+
+指定当 `至少发生一次不良事件` 的合计例数为零时，是否仍然在 [outdata](#outdata) 的第一行输出 `至少发生一次不良事件` 的汇总结果。
+
+**Default** : `false`
+
+```sas
+at_least_output_if_zero = true
+```
+
+---
+
 #### unencoded_text
 
 **Syntax** : _string_
@@ -320,6 +354,10 @@ unencoded_text = %str(未编码)
 >
 > - 当只有一个组别时，无法进行假设检验。
 > - 当有两个或多个组别时，将进行卡方检验，若卡方检验不适用，则进行 Fisher 精确检验。
+
+> [!WARNING]
+>
+> `hypothesis = true` 并不一定意味着 [outdata](#outdata) 数据集中一定会输出建设检验的 P 值，若某一 [aesoc](#aesoc) 和 [aedecod](#aedecod) 的组合在指定的组别中均未发生，四格表存在某一行或列频数为零的情况，此时假设检验无法进行，程序将仅输出统计描述的结果。
 
 **Default** : `true`
 
