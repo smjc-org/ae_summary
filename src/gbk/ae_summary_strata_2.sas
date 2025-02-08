@@ -234,90 +234,54 @@
     quit;
 
     /*创建基数据集*/
-    data tmp_base;
-        length AT_LEAST            $%length(%superq(at_least_text))
-               AT_LEAST_FLAG       8
-               &aesoc              $&&&aesoc._len_max
-               &aesoc._FLAG        8
-               &aedecod            $&&&aedecod._len_max
-               &aedecod._FLAG      8
-               %do i = 1 %to &arm_n;
-                   &aesoc._G&i._FREQ   8
-                   &aesoc._G&i._TIME   8
-                   &aedecod._G&i._FREQ 8
-                   &aedecod._G&i._TIME 8
-                   G&i._FREQ           8
-                   G&i._TIME           8
-                   G&i._RATE           8
-               %end;
-               &aesoc._ALL_FREQ    8
-               &aesoc._ALL_TIME    8
-               &aedecod._ALL_FREQ  8
-               &aedecod._ALL_TIME  8
-               ALL_FREQ            8
-               ALL_TIME            8
-               ALL_RATE            8
-               ;
-        label AT_LEAST       = %unquote(%str(%')%superq(at_least_text)%str(%'))
-              AT_LEAST_FLAG  = %unquote(%str(%')%superq(at_least_text)（FLAG）%str(%'))
-              &aesoc         = %unquote(%str(%')%superq(&aesoc._label)%str(%'))
-              &aesoc._FLAG   = %unquote(%str(%')%superq(&aesoc._label)（FLAG）%str(%'))
-              &aedecod       = %unquote(%str(%')%superq(&aedecod._label)%str(%'))
-              &aedecod._FLAG = %unquote(%str(%')%superq(&aedecod._label)（FLAG）%str(%'))
-              %do i = 1 %to &arm_n;
-                  &aesoc._G&i._FREQ   = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例数）%str(%'))
-                  &aesoc._G&i._TIME   = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例次）%str(%'))
-                  &aedecod._G&i._FREQ = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例数）%str(%'))
-                  &aedecod._G&i._TIME = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例次）%str(%'))
-                  G&i._FREQ           = %unquote(%str(%')%superq(arm_&i)-例数%str(%'))
-                  G&i._TIME           = %unquote(%str(%')%superq(arm_&i)-例次%str(%'))
-                  G&i._RATE           = %unquote(%str(%')%superq(arm_&i)-率%str(%'))
-              %end;
-              &aesoc._ALL_FREQ   = %unquote(%str(%')%superq(&aesoc._label)（合计-例数）%str(%'))
-              &aesoc._ALL_TIME   = %unquote(%str(%')%superq(&aesoc._label)（合计-例次）%str(%'))
-              &aedecod._ALL_FREQ = %unquote(%str(%')%superq(&aedecod._label)（合计-例数）%str(%'))
-              &aedecod._ALL_TIME = %unquote(%str(%')%superq(&aedecod._label)（合计-例次）%str(%'))
-              ALL_FREQ           = %unquote(%str(%')合计-例数%str(%'))
-              ALL_TIME           = %unquote(%str(%')合计-例次%str(%'))
-              ALL_RATE           = %unquote(%str(%')合计-率%str(%'))
-              ;
-
-        %do i = 1 %to &arm_n;
-            &aesoc._G&i._FREQ   = .;
-            &aesoc._G&i._TIME   = .;
-            &aedecod._G&i._FREQ = .;
-            &aedecod._G&i._TIME = .;
-            G&i._FREQ           = .;
-            G&i._TIME           = .;
-            G&i._RATE           = .;
-        %end;
-        &aesoc._ALL_FREQ   = .;
-        &aesoc._ALL_TIME   = .;
-        &aedecod._ALL_FREQ = .;
-        &aedecod._ALL_TIME = .;
-        ALL_FREQ           = .;
-        ALL_TIME           = .;
-        ALL_RATE           = .;
-
+    proc sql noprint;
+        create table tmp_base
+            (
+                AT_LEAST                char(%length(%superq(at_least_text))) label = %unquote(%str(%')%superq(at_least_text)%str(%')),
+                AT_LEAST_FLAG           num(8)                                label = %unquote(%str(%')%superq(at_least_text)（FLAG）%str(%')),
+                &aesoc                  char(&&&aesoc._len_max)               label = %unquote(%str(%')%superq(&aesoc._label)%str(%')),
+                &aesoc._FLAG            num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（FLAG）%str(%')),
+                &aedecod                char(&&&aedecod._len_max)             label = %unquote(%str(%')%superq(&aedecod._label)%str(%')),
+                &aedecod._FLAG          num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（FLAG）%str(%')),
+                %do i = 1 %to &arm_n;
+                    &aesoc._G&i._FREQ   num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例数）%str(%')),
+                    &aesoc._G&i._TIME   num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例次）%str(%')),
+                    &aedecod._G&i._FREQ num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例数）%str(%')),
+                    &aedecod._G&i._TIME num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例次）%str(%')),
+                    G&i._FREQ           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数%str(%')),
+                    G&i._TIME           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')),
+                    G&i._RATE           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-率%str(%')),
+                %end;
+                &aesoc._ALL_FREQ        num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例数）%str(%')),
+                &aesoc._ALL_TIME        num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例次）%str(%')),
+                &aedecod._ALL_FREQ      num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例数）%str(%')),
+                &aedecod._ALL_TIME      num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例次）%str(%')),
+                ALL_FREQ                num(8)                                label = %unquote(%str(%')合计-例数%str(%')),
+                ALL_TIME                num(8)                                label = %unquote(%str(%')合计-例次%str(%')),
+                ALL_RATE                num(8)                                label = %unquote(%str(%')合计-率%str(%'))
+            );
+        
         %do i = 1 %to &&&aesoc._n;
-            AT_LEAST       = "";
-            AT_LEAST_FLAG  = 0;
-            &aesoc         = "&&&aesoc._&i";
-            &aesoc._FLAG   = 1;
-            &aedecod       = "";
-            &aedecod._FLAG = .;
-            output;
+            insert into tmp_base
+                set AT_LEAST       = "",
+                    AT_LEAST_FLAG  = 0,
+                    &aesoc         = "&&&aesoc._&i",
+                    &aesoc._FLAG   = 1,
+                    &aedecod       = "",
+                    &aedecod._FLAG = .
+                    ;
             %do j = 1 %to &&&aesoc._&i._&aedecod._n;
-                AT_LEAST       = "";
-                AT_LEAST_FLAG  = 0;
-                &aesoc         = "&&&aesoc._&i";
-                &aesoc._FLAG   = 0;
-                &aedecod       = "&&&aesoc._&i._&aedecod._&j";
-                &aedecod._FLAG = 1;
-                output;
+                insert into tmp_base
+                    set AT_LEAST       = "",
+                        AT_LEAST_FLAG  = 0,
+                        &aesoc         = "&&&aesoc._&i",
+                        &aesoc._FLAG   = 0,
+                        &aedecod       = "&&&aesoc._&i._&aedecod._&j",
+                        &aedecod._FLAG = 1
+                        ;
             %end;
         %end;
-    run;
+    quit;
 
     /*统计至少发生一次不良事件的例数和例次*/
     %if %superq(at_least) = TRUE %then %do;
@@ -395,13 +359,16 @@
 
     /*计算 P 值*/
     %if %superq(hypothesis) = TRUE %then %do;
+        /*转置，将各组别发生不良事件的例数放在同一列上*/
         proc transpose data = tmp_desc out = tmp_contigency_subset_pos label = ARM;
             var %do i = 1 %to &arm_n; G&i._FREQ %end;;
             by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
         run;
 
+        /*补齐各组别未发生不良事件的例数*/
         data tmp_contigency;
             set tmp_contigency_subset_pos(rename = (COL1 = FREQ));
+            label ARM = "ARM";
             ARM = kscan(ARM, 1, "-");
             by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
 
@@ -415,32 +382,62 @@
             output;
         run;
 
+        /*检查是否至少存在某一行或某一列的频数之和为零*/
         ods html close;
-        ods output ChiSq        = tmp_chisq(where = (Statistic = "卡方"))
-                   FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
+        ods output CrossTabFreqs = tmp_cross_tab_freqs(where = (_TYPE_ in ("01", "10")));
         proc freq data = tmp_contigency;
-            tables ARM * STATUS /chisq(warn = output);
-            exact fisher;
+            tables ARM * STATUS;
             weight FREQ /zeros;
             by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
         run;
         ods html;
 
-        data tmp_summary;
-            merge tmp_desc
-                  tmp_chisq(keep = Value Prob Warning rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING))
-                  tmp_fishers_exact(keep = nValue1 rename = (nValue1 = FISHER_PVALUE));
-            PVALUE = ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE);
+        proc sql noprint;
+            select * from tmp_cross_tab_freqs where Frequency = 0;
+        quit;
 
-            label CHISQ         = "卡方统计量"
-                  CHISQ_PVALUE  = "卡方检验 P 值"
-                  CHISQ_WARNING = "卡方警告"
-                  FISHER_PVALUE = "精确检验 P 值"
-                  PVALUE        = "P 值"
-                  ;
-        run;
+        /*如果各行各列频数之和均大于零，则可以进行假设检验*/
+        %if &sqlobs = 0 %then %do;
+            ods html close;
+            ods output ChiSq    = tmp_chisq(where = (Statistic = "卡方"))
+                   FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
+            proc freq data = tmp_contigency;
+                tables ARM * STATUS /chisq(warn = output);
+                exact fisher;
+                weight FREQ /zeros;
+                by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG notsorted;
+            run;
+            ods html;
+
+            %let hypothesis_done = TRUE;
+
+            data tmp_summary;
+                merge tmp_desc
+                      tmp_chisq(keep = Value Prob Warning rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING))
+                      tmp_fishers_exact(keep = nValue1 rename = (nValue1 = FISHER_PVALUE));
+                PVALUE = ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE);
+
+                label CHISQ         = "卡方统计量"
+                      CHISQ_PVALUE  = "卡方检验 P 值"
+                      CHISQ_WARNING = "卡方警告"
+                      FISHER_PVALUE = "精确检验 P 值"
+                      PVALUE        = "P 值"
+                      ;
+            run;
+        %end;
+        /*否则，输出提示信息*/
+        %else %do;
+            %put NOTE: 存在某一行或某一列的频数之和为零，假设检验无法进行！;
+            %let hypothesis_done = FALSE;
+
+            data tmp_summary;
+                set tmp_desc;
+            run;
+        %end;
     %end;
     %else %do;
+        %let hypothesis_done = FALSE;
+
         data tmp_summary;
             set tmp_desc;
         run;
@@ -464,7 +461,7 @@
                 kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT  label = %unquote(%str(%')合计-率（C）%str(%')),
                 kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1    label = %unquote(%str(%')合计-例数（率）%str(%')),
                 kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%'))
-                %if %superq(hypothesis) = TRUE %then %do;
+                %if &hypothesis_done = TRUE %then %do;
                     %bquote(,)
                     kstrip(put(PVALUE, &format_p)) || ifc(PVALUE < 0.05, "&significance_marker", "")       as PVALUE_FMT    label = "P值"
                 %end;
@@ -498,7 +495,7 @@
              %end;
              ALL_VALUE1
              ALL_VALUE2
-             %if %superq(hypothesis) = TRUE %then %do;
+             %if &hypothesis_done = TRUE %then %do;
                 PVALUE_FMT
              %end;
              ;
