@@ -272,7 +272,6 @@
         create table tmp_base
             (
                 AT_LEAST                char(%length(%superq(at_least_text))) label = %unquote(%str(%')%superq(at_least_text)%str(%')),
-                AT_LEAST_FLAG           num(8)                                label = %unquote(%str(%')%superq(at_least_text)（FLAG）%str(%')),
                 &aesoc                  char(&&&aesoc._len_max)               label = %unquote(%str(%')%superq(&aesoc._label)%str(%')),
                 &aesoc._FLAG            num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（FLAG）%str(%')),
                 &aedecod                char(&&&aedecod._len_max)             label = %unquote(%str(%')%superq(&aedecod._label)%str(%')),
@@ -305,7 +304,6 @@
         %do i = 1 %to &&&aesoc._n;
             insert into tmp_base
                 set AT_LEAST       = "",
-                    AT_LEAST_FLAG  = 0,
                     &aesoc         = "&&&aesoc._&i",
                     &aesoc._FLAG   = 1,
                     &aedecod       = "",
@@ -317,7 +315,6 @@
             %do j = 1 %to &&&aesoc._&i._&aesev._n;
                 insert into tmp_base
                     set AT_LEAST       = "",
-                        AT_LEAST_FLAG  = 0,
                         &aesoc         = "&&&aesoc._&i",
                         &aesoc._FLAG   = 1,
                         &aedecod       = "",
@@ -330,7 +327,6 @@
             %do j = 1 %to &&&aesoc._&i._&aedecod._n;
                 insert into tmp_base
                     set AT_LEAST       = "",
-                        AT_LEAST_FLAG  = 0,
                         &aesoc         = "&&&aesoc._&i",
                         &aesoc._FLAG   = 1,
                         &aedecod       = "&&&aesoc._&i._&aedecod._&j",
@@ -342,7 +338,6 @@
                 %do k = 1 %to &&&aesoc._&i._&aedecod._&j._&aesev._n;
                     insert into tmp_base
                         set AT_LEAST       = "",
-                            AT_LEAST_FLAG  = 0,
                             &aesoc         = "&&&aesoc._&i",
                             &aesoc._FLAG   = 1,
                             &aedecod       = "&&&aesoc._&i._&aedecod._&j",
@@ -362,7 +357,6 @@
             create table tmp_desc_at_least like tmp_base;
             insert into tmp_desc_at_least
                 set AT_LEAST       = %unquote(%str(%')%superq(at_least_text)%str(%')),
-                    AT_LEAST_FLAG  = 1,
                     &aesoc._FLAG   = 0,
                     &aedecod._FLAG = 0,
                     &aesev._FLAG   = 0,
@@ -456,7 +450,7 @@
         /*转置，将各组别发生不良事件的例数放在同一列上*/
         proc transpose data = tmp_desc out = tmp_contigency_subset_pos label = ARM;
             var %do i = 1 %to &arm_n; G&i._FREQ %end;;
-            by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG &aesev &aesev._FLAG notsorted;
+            by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod &aesev._FLAG &aesev notsorted;
         run;
 
         /*补齐各组别未发生不良事件的例数*/
@@ -464,7 +458,7 @@
             set tmp_contigency_subset_pos(rename = (COL1 = FREQ));
             label ARM = "ARM";
             ARM = kscan(ARM, 1, "-");
-            by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG &aesev &aesev._FLAG notsorted;
+            by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod &aesev._FLAG &aesev notsorted;
 
             length STATUS $12;
             STATUS = "EXPOSED";
@@ -482,7 +476,7 @@
         proc freq data = tmp_contigency;
             tables ARM * STATUS;
             weight FREQ /zeros;
-            by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG &aesev &aesev._FLAG notsorted;
+            by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod &aesev._FLAG &aesev notsorted;
         run;
         ods html;
 
@@ -499,7 +493,7 @@
                 tables ARM * STATUS /chisq(warn = output);
                 exact fisher;
                 weight FREQ /zeros;
-                by AT_LEAST AT_LEAST_FLAG &aesoc &aesoc._FLAG &aedecod &aedecod._FLAG &aesev &aesev._FLAG notsorted;
+                by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod &aesev._FLAG &aesev notsorted;
             run;
             ods html;
 
@@ -542,8 +536,8 @@
         create table tmp_summary_formated as
             select
                 *,
-                (case when AT_LEAST_FLAG  = 1 then AT_LEAST
-                      when &aesoc._FLAG = 1   then
+                (case when &aesoc._FLAG = 0 then AT_LEAST
+                      when &aesoc._FLAG = 1 then
                       (case when &aedecod._FLAG = 0 then
                             (case when &aesev._FLAG = 0 then &aesoc
                                   when &aesev._FLAG = 1 then "    " || &aesev
@@ -573,8 +567,7 @@
     proc sql noprint sortseq = linguistic;
         create table tmp_summary_formated_sorted as
             select * from tmp_summary_formated
-            order by AT_LEAST_FLAG descending,
-                     &aesoc._FLAG,
+            order by &aesoc._FLAG,
                      %do i = 1 %to &sort_by_part_n;
                          &aesoc._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
                      %end;
