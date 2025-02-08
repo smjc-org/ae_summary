@@ -7,61 +7,64 @@
 
 %macro ae_summary_strata_2(indata,
                            outdata,
-                           aesoc               = aesoc,
-                           aedecod             = aedecod,
-                           aeseq               = aeseq,
-                           usubjid             = usubjid,
-                           arm                 = #null,
-                           arm_by              = %nrstr(&arm),
-                           sort_by             = %str(#FREQ(desc) #TIME(desc)),
-                           at_least            = true,
-                           at_least_text       = %str(至少发生一次AE),
-                           unencoded_text      = %str(未编码),
-                           hypothesis          = false,
-                           format_freq         = best12.,
-                           format_rate         = percentn9.2,
-                           format_p            = pvalue6.4,
-                           significance_marker = %str(*),
-                           debug               = false) / parmbuff;
-    /*  indata:              不良事件 ADaM 数据集名称
-     *  outdata:             保存汇总结果的数据集名称
-     *  aesoc:               变量-系统器官分类
-     *  aedecod:             变量-首选术语
-     *  aeseq:               变量-不良事件序号
-     *  usubjid:             变量-受试者唯一编号
-     *  arm:                 变量-试验组别，#null 表示单组
-     *  arm_by:              变量-试验组别的排序方式，可能的取值有：数值型变量、输出格式、#null，#null 表示单组
-     *  sort_by:             汇总结果数据集中观测的排序方式，详细语法参考帮助文档
-     *  at_least:            是否在汇总结果数据集的第一行输出至少发生一次不良事件的统计结果
-     *  at_least_text:       at_least = true 时，汇总结果数据集的第一行显示的描述性文本
-     *  unencoded_text       不良事件未编码，即 aesoc, aedecod 缺失时，汇总结果数据集中显示的替代字符串
-     *  hypothesis:          是否进行假设检验
-     *  format_freq:         例数和例次的输出格式
-     *  format_rate:         率的输出格式
-     *  format_p:            p 值的输出格式
-     *  significance_marker: p 值 < 0.05 的标记字符
-     *  debug:               调试模式
+                           aesoc                   = aesoc,
+                           aedecod                 = aedecod,
+                           aeseq                   = aeseq,
+                           usubjid                 = usubjid,
+                           arm                     = #null,
+                           arm_by                  = %nrstr(&arm),
+                           sort_by                 = %str(#FREQ(desc) #TIME(desc)),
+                           at_least                = true,
+                           at_least_text           = %str(至少发生一次AE),
+                           at_least_output_if_zero = false,
+                           unencoded_text          = %str(未编码),
+                           hypothesis              = false,
+                           format_freq             = best12.,
+                           format_rate             = percentn9.2,
+                           format_p                = pvalue6.4,
+                           significance_marker     = %str(*),
+                           debug                   = false) / parmbuff;
+    /*  indata:                 不良事件 ADaM 数据集名称
+     *  outdata:                保存汇总结果的数据集名称
+     *  aesoc:                  变量-系统器官分类
+     *  aedecod:                变量-首选术语
+     *  aeseq:                  变量-不良事件序号
+     *  usubjid:                变量-受试者唯一编号
+     *  arm:                    变量-试验组别，#null 表示单组
+     *  arm_by:                 变量-试验组别的排序方式，可能的取值有：数值型变量、输出格式、#null，#null 表示单组
+     *  sort_by:                汇总结果数据集中观测的排序方式，详细语法参考帮助文档
+     *  at_least:               是否在汇总结果数据集的第一行输出至少发生一次不良事件的统计结果
+     *  at_least_text:          at_least = true 时，汇总结果数据集的第一行显示的描述性文本
+     *  at_least_output_if_zero 当至少发生一次不良事件的合计例数为零时，是否仍然在汇总结果数据集中输出
+     *  unencoded_text          不良事件未编码，即 aesoc, aedecod 缺失时，汇总结果数据集中显示的替代字符串
+     *  hypothesis:             是否进行假设检验
+     *  format_freq:            例数和例次的输出格式
+     *  format_rate:            率的输出格式
+     *  format_p:               p 值的输出格式
+     *  significance_marker:    p 值 < 0.05 的标记字符
+     *  debug:                  调试模式
     */
 
     /*统一参数大小写*/
-    %let indata              = %sysfunc(strip(%superq(indata)));
-    %let outdata             = %sysfunc(strip(%superq(outdata)));
-    %let aesoc               = %upcase(%sysfunc(strip(%bquote(&aesoc))));
-    %let aedecod             = %upcase(%sysfunc(strip(%bquote(&aedecod))));
-    %let aeseq               = %upcase(%sysfunc(strip(%bquote(&aeseq))));
-    %let usubjid             = %upcase(%sysfunc(strip(%bquote(&usubjid))));
-    %let arm                 = %upcase(%sysfunc(strip(%bquote(&arm))));
-    %let arm_by              = %upcase(%sysfunc(strip(%bquote(&arm_by))));
-    %let sort_by             = %upcase(%sysfunc(strip(%bquote(&sort_by))));
-    %let at_least            = %upcase(%sysfunc(strip(%bquote(&at_least))));
-    %let at_least_text       = %sysfunc(strip(%superq(at_least_text)));
-    %let unencoded_text      = %sysfunc(strip(%superq(unencoded_text)));
-    %let hypothesis          = %upcase(%sysfunc(strip(%bquote(&hypothesis))));
-    %let format_freq         = %upcase(%sysfunc(strip(%bquote(&format_freq))));
-    %let format_rate         = %upcase(%sysfunc(strip(%bquote(&format_rate))));
-    %let format_p            = %upcase(%sysfunc(strip(%bquote(&format_p))));
-    %let significance_marker = %sysfunc(strip(%bquote(&significance_marker)));
-    %let debug               = %upcase(%sysfunc(strip(%bquote(&debug))));
+    %let indata                  = %sysfunc(strip(%superq(indata)));
+    %let outdata                 = %sysfunc(strip(%superq(outdata)));
+    %let aesoc                   = %upcase(%sysfunc(strip(%bquote(&aesoc))));
+    %let aedecod                 = %upcase(%sysfunc(strip(%bquote(&aedecod))));
+    %let aeseq                   = %upcase(%sysfunc(strip(%bquote(&aeseq))));
+    %let usubjid                 = %upcase(%sysfunc(strip(%bquote(&usubjid))));
+    %let arm                     = %upcase(%sysfunc(strip(%bquote(&arm))));
+    %let arm_by                  = %upcase(%sysfunc(strip(%bquote(&arm_by))));
+    %let sort_by                 = %upcase(%sysfunc(strip(%bquote(&sort_by))));
+    %let at_least                = %upcase(%sysfunc(strip(%bquote(&at_least))));
+    %let at_least_text           = %sysfunc(strip(%superq(at_least_text)));
+    %let at_least_output_if_zero = %upcase(%sysfunc(strip(%bquote(&at_least_output_if_zero))));
+    %let unencoded_text          = %sysfunc(strip(%superq(unencoded_text)));
+    %let hypothesis              = %upcase(%sysfunc(strip(%bquote(&hypothesis))));
+    %let format_freq             = %upcase(%sysfunc(strip(%bquote(&format_freq))));
+    %let format_rate             = %upcase(%sysfunc(strip(%bquote(&format_rate))));
+    %let format_p                = %upcase(%sysfunc(strip(%bquote(&format_p))));
+    %let significance_marker     = %sysfunc(strip(%bquote(&significance_marker)));
+    %let debug                   = %upcase(%sysfunc(strip(%bquote(&debug))));
 
     /*参数预处理*/
     /*arm*/
@@ -315,6 +318,9 @@
                     %end;
                     ALL_RATE = ALL_FREQ / &subj_n
                     ;
+            %if %superq(at_least_output_if_zero) = FALSE %then %do;
+                delete from tmp_desc_at_least where ALL_FREQ = 0;
+            %end;
         quit;
     %end;
 
@@ -358,7 +364,10 @@
     run;
 
     /*计算 P 值*/
-    %if %superq(hypothesis) = TRUE %then %do;
+    proc sql noprint;
+        select * from tmp_desc;
+    quit;
+    %if &sqlobs > 0 and %superq(hypothesis) = TRUE %then %do;
         /*转置，将各组别发生不良事件的例数放在同一列上*/
         proc transpose data = tmp_desc out = tmp_contigency_subset_pos label = ARM;
             var %do i = 1 %to &arm_n; G&i._FREQ %end;;
