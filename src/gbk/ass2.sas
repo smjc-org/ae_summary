@@ -348,11 +348,11 @@
                 ;
         update tmp_desc_arm
             set %do i = 1 %to &arm_n;
-                    G&i._FREQ           = ifn(&aesoc._FLAG = 1, &aesoc._G&i._FREQ, ifn(&aedecod._FLAG = 1, &aedecod._G&i._FREQ, .)),
-                    G&i._TIME           = ifn(&aesoc._FLAG = 1, &aesoc._G&i._TIME, ifn(&aedecod._FLAG = 1, &aedecod._G&i._TIME, .)),
+                    G&i._FREQ           = ifn(&aedecod._FLAG = 1, &aedecod._G&i._FREQ, ifn(&aesoc._FLAG = 1, &aesoc._G&i._FREQ, .)),
+                    G&i._TIME           = ifn(&aedecod._FLAG = 1, &aedecod._G&i._TIME, ifn(&aesoc._FLAG = 1, &aesoc._G&i._TIME, .)),
                 %end;
-                ALL_FREQ           = ifn(&aesoc._FLAG = 1, &aesoc._ALL_FREQ, ifn(&aedecod._FLAG = 1, &aedecod._ALL_FREQ, .)),
-                ALL_TIME           = ifn(&aesoc._FLAG = 1, &aesoc._ALL_TIME, ifn(&aedecod._FLAG = 1, &aedecod._ALL_TIME, .))
+                ALL_FREQ           = ifn(&aedecod._FLAG = 1, &aedecod._ALL_FREQ, ifn(&aesoc._FLAG = 1, &aesoc._ALL_FREQ, .)),
+                ALL_TIME           = ifn(&aedecod._FLAG = 1, &aedecod._ALL_TIME, ifn(&aesoc._FLAG = 1, &aesoc._ALL_TIME, .))
                 ;
         update tmp_desc_arm
             set %do i = 1 %to &arm_n;
