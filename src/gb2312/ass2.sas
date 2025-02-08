@@ -180,7 +180,12 @@
                     %end;
                 %end;
 
-                %let sort_by_part_&i._direction = &&sort_by_part_&i._direction.ENDING;
+                %if &&sort_by_part_&i._direction = %bquote() %then %do;
+                    %let sort_by_part_&i._direction = DESCENDING;
+                %end;
+                %else %do;
+                    %let sort_by_part_&i._direction = &&sort_by_part_&i._direction.ENDING;
+                %end;
             %end;
         %end;
     %end;
