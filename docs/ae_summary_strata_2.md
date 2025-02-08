@@ -357,7 +357,7 @@ unencoded_text = %str(未编码)
 
 > [!WARNING]
 >
-> `hypothesis = true` 并不一定意味着 [outdata](#outdata) 数据集中一定会输出建设检验的 P 值，若某一 [aesoc](#aesoc) 和 [aedecod](#aedecod) 的组合在指定的组别中均未发生，四格表存在某一行或列频数为零的情况，此时假设检验无法进行，程序将仅输出统计描述的结果。
+> `hypothesis = true` 并不一定意味着 [outdata](#outdata) 数据集中一定会输出假设检验的 P 值，若某一 [aesoc](#aesoc) 和 [aedecod](#aedecod) 的组合在指定的组别中均未发生，则列联表中存在某一行或某一列频数之和为零的情况，此时假设检验无法进行，程序将仅输出统计描述的结果。
 
 **Default** : `true`
 
