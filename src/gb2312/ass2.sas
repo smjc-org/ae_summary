@@ -525,6 +525,7 @@
                    tmp_desc
                    tmp_contigency_subset_pos
                    tmp_contigency
+                   tmp_cross_tab_freqs
                    tmp_chisq
                    tmp_fishers_exact
                    tmp_summary
