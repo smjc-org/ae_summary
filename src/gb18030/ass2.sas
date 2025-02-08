@@ -3,6 +3,7 @@
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
  * Version Date:  2025-02-07 0.1.0
+                  2025-02-08 0.2.0
 */
 
 %macro ass2(indata,
@@ -235,8 +236,8 @@
 
     /*获取 aesoc 和 aedecod 的标签*/
     proc sql noprint;
-        select label into :&aesoc._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and name = "&aesoc";
-        select label into :&aedecod._label trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and name = "&aedecod";
+        select label into :&aesoc._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesoc";
+        select label into :&aedecod._label trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aedecod";
     quit;
 
     /*创建基数据集*/
