@@ -1,29 +1,29 @@
 /*
- * Macro Name:    ae_summary_strata_2
+ * Macro Name:    ass2
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
  * Version Date:  2025-02-07 0.1.0
 */
 
-%macro ae_summary_strata_2(indata,
-                           outdata,
-                           aesoc                   = aesoc,
-                           aedecod                 = aedecod,
-                           aeseq                   = aeseq,
-                           usubjid                 = usubjid,
-                           arm                     = #null,
-                           arm_by                  = %nrstr(&arm),
-                           sort_by                 = %str(#FREQ(desc) #TIME(desc)),
-                           at_least                = true,
-                           at_least_text           = %str(至少发生一次AE),
-                           at_least_output_if_zero = false,
-                           unencoded_text          = %str(未编码),
-                           hypothesis              = false,
-                           format_freq             = best12.,
-                           format_rate             = percentn9.2,
-                           format_p                = pvalue6.4,
-                           significance_marker     = %str(*),
-                           debug                   = false) / parmbuff;
+%macro ass2(indata,
+            outdata,
+            aesoc                   = aesoc,
+            aedecod                 = aedecod,
+            aeseq                   = aeseq,
+            usubjid                 = usubjid,
+            arm                     = #null,
+            arm_by                  = %nrstr(&arm),
+            sort_by                 = %str(#FREQ(desc) #TIME(desc)),
+            at_least                = true,
+            at_least_text           = %str(至少发生一次AE),
+            at_least_output_if_zero = false,
+            unencoded_text          = %str(未编码),
+            hypothesis              = false,
+            format_freq             = best12.,
+            format_rate             = percentn9.2,
+            format_p                = pvalue6.4,
+            significance_marker     = %str(*),
+            debug                   = false) / parmbuff;
     /*  indata:                 不良事件 ADaM 数据集名称
      *  outdata:                保存汇总结果的数据集名称
      *  aesoc:                  变量-系统器官分类
@@ -535,5 +535,5 @@
     %end;
 
     %exit:
-    %put NOTE: 宏程序 ae_summary_strata_2 已结束运行！;
+    %put NOTE: 宏程序 ass2 已结束运行！;
 %mend;
