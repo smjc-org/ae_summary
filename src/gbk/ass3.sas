@@ -524,7 +524,8 @@
                 kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT  label = %unquote(%str(%')合计-率（C）%str(%')),
                 kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1    label = %unquote(%str(%')合计-例数（率）%str(%')),
                 kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%')),
-                kstrip(put(PVALUE, &format_p)) || ifc(. < PVALUE < 0.05, "&significance_marker", "")       as PVALUE_FMT    label = "P值"
+                ifc(not missing(PVALUE), kstrip(put(PVALUE, &format_p)) || ifc(. < PVALUE < 0.05, "&significance_marker", ""), "")
+                                                                                                           as PVALUE_FMT    label = "P值"
             from tmp_summary;
     quit;
 
