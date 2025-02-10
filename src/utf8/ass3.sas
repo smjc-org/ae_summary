@@ -262,10 +262,10 @@
 
     /*获取 aesoc, aedecod, aesev 的标签*/
     proc sql noprint;
-        select label into :&aesoc._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesoc";
-        select label into :&aedecod._label trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aedecod";
-        select label into :&aesev._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesev";
-        select label into :&aesevn._label  trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesevn";
+        select coalescec(label, upcase(name)) into :&aesoc._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesoc";
+        select coalescec(label, upcase(name)) into :&aedecod._label trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aedecod";
+        select coalescec(label, upcase(name)) into :&aesev._label   trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesev";
+        select coalescec(label, upcase(name)) into :&aesevn._label  trimmed from dictionary.columns where libname = "WORK" and memname = "TMP_INDATA" and upcase(name) = "&aesevn";
     quit;
 
     /*创建基数据集*/
