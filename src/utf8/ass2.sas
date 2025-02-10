@@ -4,6 +4,7 @@
  * Author:        wtwang
  * Version Date:  2025-02-07 0.1.0
                   2025-02-08 0.2.0
+                  2025-02-10 0.3.0
 */
 
 %macro ass2(indata,
@@ -354,6 +355,7 @@
 
     /*合并 <tmp_desc_at_least> 和 tmp_desc_arm*/
     data tmp_desc;
+        SEQ = _n_;
         set %if %superq(at_least) = TRUE %then %do;
                 tmp_desc_at_least
             %end;
@@ -368,7 +370,7 @@
         /*转置，将各组别发生不良事件的例数放在同一列上*/
         proc transpose data = tmp_desc out = tmp_contigency_subset_pos label = ARM;
             var %do i = 1 %to &arm_n; G&i._FREQ %end;;
-            by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod notsorted;
+            by SEQ;
         run;
 
         /*补齐各组别未发生不良事件的例数*/
@@ -376,7 +378,7 @@
             set tmp_contigency_subset_pos(rename = (COL1 = FREQ));
             label ARM = "ARM";
             ARM = kscan(ARM, 1, "-");
-            by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod notsorted;
+            by SEQ;
 
             length STATUS $12;
             STATUS = "EXPOSED";
@@ -388,62 +390,33 @@
             output;
         run;
 
-        /*检查是否至少存在某一行或某一列的频数之和为零*/
+        /*假设检验*/
         ods html close;
-        ods output CrossTabFreqs = tmp_cross_tab_freqs(where = (_TYPE_ in ("01", "10")));
+        ods output ChiSq    = tmp_chisq(where = (Statistic = "卡方"))
+               FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
         proc freq data = tmp_contigency;
-            tables ARM * STATUS;
+            tables ARM * STATUS /chisq(warn = output);
+            exact fisher;
             weight FREQ /zeros;
-            by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod notsorted;
+            by SEQ;
         run;
         ods html;
 
         proc sql noprint;
-            select * from tmp_cross_tab_freqs where Frequency = 0;
+            create table tmp_summary as
+                select
+                    tmp_desc.*,
+                    tmp_chisq.CHISQ                 as CHISQ         label = "卡方统计量",
+                    tmp_chisq.CHISQ_PVALUE          as CHISQ_PVALUE  label = "卡方检验 P 值",
+                    tmp_chisq.CHISQ_WARNING         as CHISQ_WARNING label = "卡方警告",
+                    tmp_fishers_exact.FISHER_PVALUE as FISHER_PVALUE label = "精确检验 P 值",
+                    ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE)
+                                                    as PVALUE        label = "P 值"
+                from tmp_desc left join tmp_chisq(rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING)) as tmp_chisq on tmp_desc.SEQ = tmp_chisq.SEQ
+                              left join tmp_fishers_exact(rename = (nValue1 = FISHER_PVALUE)) as tmp_fishers_exact                   on tmp_desc.SEQ = tmp_fishers_exact.SEQ;
         quit;
-
-        /*如果各行各列频数之和均大于零，则可以进行假设检验*/
-        %if &sqlobs = 0 %then %do;
-            ods html close;
-            ods output ChiSq    = tmp_chisq(where = (Statistic = "卡方"))
-                   FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
-            proc freq data = tmp_contigency;
-                tables ARM * STATUS /chisq(warn = output);
-                exact fisher;
-                weight FREQ /zeros;
-                by &aesoc._FLAG &aesoc &aedecod._FLAG &aedecod notsorted;
-            run;
-            ods html;
-
-            %let hypothesis_done = TRUE;
-
-            data tmp_summary;
-                merge tmp_desc
-                      tmp_chisq(keep = Value Prob Warning rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING))
-                      tmp_fishers_exact(keep = nValue1 rename = (nValue1 = FISHER_PVALUE));
-                PVALUE = ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE);
-
-                label CHISQ         = "卡方统计量"
-                      CHISQ_PVALUE  = "卡方检验 P 值"
-                      CHISQ_WARNING = "卡方警告"
-                      FISHER_PVALUE = "精确检验 P 值"
-                      PVALUE        = "P 值"
-                      ;
-            run;
-        %end;
-        /*否则，输出提示信息*/
-        %else %do;
-            %put NOTE: 存在某一行或某一列的频数之和为零，假设检验无法进行！;
-            %let hypothesis_done = FALSE;
-
-            data tmp_summary;
-                set tmp_desc;
-            run;
-        %end;
     %end;
     %else %do;
-        %let hypothesis_done = FALSE;
-
         data tmp_summary;
             set tmp_desc;
         run;
@@ -467,11 +440,8 @@
                 %end;
                 kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT  label = %unquote(%str(%')合计-率（C）%str(%')),
                 kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1    label = %unquote(%str(%')合计-例数（率）%str(%')),
-                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%'))
-                %if &hypothesis_done = TRUE %then %do;
-                    %bquote(,)
-                    kstrip(put(PVALUE, &format_p)) || ifc(PVALUE < 0.05, "&significance_marker", "")       as PVALUE_FMT    label = "P值"
-                %end;
+                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%')),
+                kstrip(put(PVALUE, &format_p)) || ifc(. < PVALUE < 0.05, "&significance_marker", "")           as PVALUE_FMT    label = "P值"
             from tmp_summary;
     quit;
 
@@ -502,7 +472,7 @@
              %end;
              ALL_VALUE1
              ALL_VALUE2
-             %if &hypothesis_done = TRUE %then %do;
+             %if &hypothesis = TRUE %then %do;
                 PVALUE_FMT
              %end;
              ;
