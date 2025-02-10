@@ -390,31 +390,57 @@
             output;
         run;
 
-        /*假设检验*/
+        /*检查所有 by 组都存在某一行或某一列的频数之和为零*/
         ods html close;
-        ods output ChiSq    = tmp_chisq(where = (Statistic = "卡方"))
-               FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
+        ods output CrossTabFreqs = tmp_cross_tab_freqs(where = (_TYPE_ in ("01", "10")));
         proc freq data = tmp_contigency;
-            tables ARM * STATUS /chisq(warn = output);
-            exact fisher;
+            tables ARM * STATUS;
             weight FREQ /zeros;
             by SEQ;
         run;
         ods html;
 
         proc sql noprint;
-            create table tmp_summary as
-                select
-                    tmp_desc.*,
-                    tmp_chisq.CHISQ                 as CHISQ         label = "卡方统计量",
-                    tmp_chisq.CHISQ_PVALUE          as CHISQ_PVALUE  label = "卡方检验 P 值",
-                    tmp_chisq.CHISQ_WARNING         as CHISQ_WARNING label = "卡方警告",
-                    tmp_fishers_exact.FISHER_PVALUE as FISHER_PVALUE label = "精确检验 P 值",
-                    ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE)
-                                                    as PVALUE        label = "P 值"
-                from tmp_desc left join tmp_chisq(rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING)) as tmp_chisq on tmp_desc.SEQ = tmp_chisq.SEQ
-                              left join tmp_fishers_exact(rename = (nValue1 = FISHER_PVALUE)) as tmp_fishers_exact                   on tmp_desc.SEQ = tmp_fishers_exact.SEQ;
+            select distinct SEQ from tmp_cross_tab_freqs;
+            %let by_n = &sqlobs;
+            select distinct SEQ from tmp_cross_tab_freqs where Frequency = 0;
+            %let by_n_any_row_or_col_eq_0 = &sqlobs;
         quit;
+
+        /*如果存在某个 by 组各行各列频数之和均大于零，则可以进行假设检验*/
+        %if &by_n ^= &by_n_any_row_or_col_eq_0 %then %do;
+            ods html close;
+            ods output ChiSq        = tmp_chisq(where = (Statistic = "卡方"))
+                       FishersExact = tmp_fishers_exact(where = (Name1 = "XP2_FISH"));
+            proc freq data = tmp_contigency;
+                tables ARM * STATUS /chisq(warn = output);
+                exact fisher;
+                weight FREQ /zeros;
+                by SEQ;
+            run;
+            ods html;
+
+            proc sql noprint;
+                create table tmp_summary as
+                    select
+                        tmp_desc.*,
+                        tmp_chisq.CHISQ                 as CHISQ         label = "卡方统计量",
+                        tmp_chisq.CHISQ_PVALUE          as CHISQ_PVALUE  label = "卡方检验 P 值",
+                        tmp_chisq.CHISQ_WARNING         as CHISQ_WARNING label = "卡方警告",
+                        tmp_fishers_exact.FISHER_PVALUE as FISHER_PVALUE label = "精确检验 P 值",
+                        ifn(CHISQ_WARNING = 1, FISHER_PVALUE, CHISQ_PVALUE)
+                                                        as PVALUE        label = "P 值"
+                    from tmp_desc left join tmp_chisq(rename = (Value = CHISQ Prob = CHISQ_PVALUE Warning = CHISQ_WARNING)) as tmp_chisq on tmp_desc.SEQ = tmp_chisq.SEQ
+                                  left join tmp_fishers_exact(rename = (nValue1 = FISHER_PVALUE)) as tmp_fishers_exact                   on tmp_desc.SEQ = tmp_fishers_exact.SEQ;
+            quit;
+        %end;
+        %else %do;
+            data tmp_summary;
+                set tmp_desc;
+                PVALUE = .;
+                label PVALUE = "P 值";
+            run;
+        %end;
     %end;
     %else %do;
         data tmp_summary;
