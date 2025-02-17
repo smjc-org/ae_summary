@@ -2,9 +2,7 @@
  * Macro Name:    ass2
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
- * Version Date:  2025-02-07 0.1.0
-                  2025-02-08 0.2.0
-                  2025-02-10 0.3.0
+ * Version Date:  2025-02-17
 */
 
 %macro ass2(indata,
@@ -364,9 +362,9 @@
 
     /*计算 P 值*/
     proc sql noprint;
-        select * from tmp_desc;
+        select count(*) into :obs_n from tmp_desc;
     quit;
-    %if &sqlobs > 0 and %superq(hypothesis) = TRUE %then %do;
+    %if &obs_n > 0 and %superq(hypothesis) = TRUE %then %do;
         /*转置，将各组别发生不良事件的例数放在同一列上*/
         proc transpose data = tmp_desc out = tmp_contigency_subset_pos label = ARM;
             var %do i = 1 %to &arm_n; G&i._FREQ %end;;
@@ -401,10 +399,8 @@
         ods html;
 
         proc sql noprint;
-            select distinct SEQ from tmp_cross_tab_freqs;
-            %let by_n = &sqlobs;
-            select distinct SEQ from tmp_cross_tab_freqs where Frequency = 0;
-            %let by_n_any_row_or_col_eq_0 = &sqlobs;
+            select count(distinct SEQ) into :by_n                     from tmp_cross_tab_freqs;
+            select count(distinct SEQ) into :by_n_any_row_or_col_eq_0 from tmp_cross_tab_freqs where Frequency = 0;
         quit;
 
         /*如果存在某个 by 组各行各列频数之和均大于零，则可以进行假设检验*/
