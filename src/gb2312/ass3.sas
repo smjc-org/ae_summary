@@ -490,13 +490,15 @@
                 label PVALUE = "P 值";
             run;
         %end;
+
+        %let PVALUE_AVALIABLE = TRUE;
     %end;
     %else %do;
-        %let hypothesis_done = FALSE;
-
         data tmp_summary;
             set tmp_desc;
         run;
+
+        %let PVALUE_AVALIABLE = FALSE;
     %end;
 
     /*应用 format*/
@@ -523,9 +525,12 @@
                 %end;
                 kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT  label = %unquote(%str(%')合计-率（C）%str(%')),
                 kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1    label = %unquote(%str(%')合计-例数（率）%str(%')),
-                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%')),
-                ifc(not missing(PVALUE), kstrip(put(PVALUE, &format_p)) || ifc(. < PVALUE < 0.05, "&significance_marker", ""), "")
+                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%'))
+                %if &PVALUE_AVALIABLE = TRUE %then %do;
+                    %bquote(,)
+                    ifc(not missing(PVALUE), kstrip(put(PVALUE, &format_p)) || ifc(. < PVALUE < 0.05, "&significance_marker", ""), "")
                                                                                                            as PVALUE_FMT    label = "P值"
+                %end;
             from tmp_summary;
     quit;
 
@@ -557,7 +562,7 @@
              %end;
              ALL_VALUE1
              ALL_VALUE2
-             %if &hypothesis = TRUE %then %do;
+             %if &PVALUE_AVALIABLE = TRUE %then %do;
                 PVALUE_FMT
              %end;
              ;
