@@ -208,10 +208,10 @@
 
     /*创建各组别子集数据集，计算受试者数量*/
     proc sql noprint;
-        select count(distinct usubjid) into :subj_n from tmp_indata;
+        select count(distinct &usubjid) into :subj_n from tmp_indata;
         %do i = 1 %to &arm_n;
             create table tmp_indata_arm_&i as select * from tmp_indata where &arm = %unquote(%str(%')%superq(arm_&i)%str(%'));
-            select count(distinct usubjid) into :arm_&i._subj_n from tmp_indata_arm_&i;
+            select count(distinct &usubjid) into :arm_&i._subj_n from tmp_indata_arm_&i;
         %end;
     quit;
 
