@@ -331,15 +331,15 @@
         create table tmp_desc_arm as select * from tmp_base;
         update tmp_desc_arm
             set %do i = 1 %to &arm_n;
-                    &aesoc._G&i._FREQ   = (select count(distinct &usubjid) from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc),
-                    &aesoc._G&i._TIME   = (select count(&usubjid)          from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc),
-                    &aedecod._G&i._FREQ = (select count(distinct &usubjid) from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc and tmp_indata_arm_&i..&aedecod = tmp_desc_arm.&aedecod),
-                    &aedecod._G&i._TIME = (select count(&usubjid)          from tmp_indata_arm_&i where tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc and tmp_indata_arm_&i..&aedecod = tmp_desc_arm.&aedecod),
+                    &aesoc._G&i._FREQ   = (select count(distinct &usubjid) from tmp_indata_arm_&i where not missing(&aeseq) and tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc),
+                    &aesoc._G&i._TIME   = (select count(&usubjid)          from tmp_indata_arm_&i where not missing(&aeseq) and tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc),
+                    &aedecod._G&i._FREQ = (select count(distinct &usubjid) from tmp_indata_arm_&i where not missing(&aeseq) and tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc and tmp_indata_arm_&i..&aedecod = tmp_desc_arm.&aedecod),
+                    &aedecod._G&i._TIME = (select count(&usubjid)          from tmp_indata_arm_&i where not missing(&aeseq) and tmp_indata_arm_&i..&aesoc = tmp_desc_arm.&aesoc and tmp_indata_arm_&i..&aedecod = tmp_desc_arm.&aedecod),
                 %end;
-                &aesoc._ALL_FREQ   = (select count(distinct &usubjid) from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc),
-                &aesoc._ALL_TIME   = (select count(&usubjid)          from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc),
-                &aedecod._ALL_FREQ = (select count(distinct &usubjid) from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc and tmp_indata.&aedecod = tmp_desc_arm.&aedecod),
-                &aedecod._ALL_TIME = (select count(&usubjid)          from tmp_indata where tmp_indata.&aesoc = tmp_desc_arm.&aesoc and tmp_indata.&aedecod = tmp_desc_arm.&aedecod)
+                &aesoc._ALL_FREQ   = (select count(distinct &usubjid) from tmp_indata where not missing(&aeseq) and tmp_indata.&aesoc = tmp_desc_arm.&aesoc),
+                &aesoc._ALL_TIME   = (select count(&usubjid)          from tmp_indata where not missing(&aeseq) and tmp_indata.&aesoc = tmp_desc_arm.&aesoc),
+                &aedecod._ALL_FREQ = (select count(distinct &usubjid) from tmp_indata where not missing(&aeseq) and tmp_indata.&aesoc = tmp_desc_arm.&aesoc and tmp_indata.&aedecod = tmp_desc_arm.&aedecod),
+                &aedecod._ALL_TIME = (select count(&usubjid)          from tmp_indata where not missing(&aeseq) and tmp_indata.&aesoc = tmp_desc_arm.&aesoc and tmp_indata.&aedecod = tmp_desc_arm.&aedecod)
                 ;
         update tmp_desc_arm
             set %do i = 1 %to &arm_n;
