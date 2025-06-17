@@ -31,6 +31,7 @@
 - [format_rate](#format_rate)
 - [format_p](#format_p)
 - [significance_marker](#significance_marker)
+- [output_time_rate](#output_time_rate)
 
 #### 调试参数
 
@@ -432,6 +433,16 @@ significance_marker = %str(*)
 ```
 
 ---
+
+#### output_time_rate
+
+**Syntax** : `true` | `false`
+
+指定是否输出例次率。
+
+例次率 = 例次 / 总例数 × 100%。
+
+**Default** : `false`
 
 #### debug
 
