@@ -2,7 +2,7 @@
  * Macro Name:    ass2
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
- * Version Date:  2025-02-17
+ * Version Date:  2025-06-17
 */
 
 %macro ass2(indata,
@@ -23,6 +23,7 @@
             format_rate             = percentn9.2,
             format_p                = pvalue6.4,
             significance_marker     = %str(*),
+            output_time_rate        = false,
             debug                   = false) / parmbuff;
     /*  indata:                 不良事件 ADaM 数据集名称
      *  outdata:                保存汇总结果的数据集名称
@@ -42,6 +43,7 @@
      *  format_rate:            率的输出格式
      *  format_p:               p 值的输出格式
      *  significance_marker:    p 值 < 0.05 的标记字符
+     *  output_time_rate:       输出例次率，例次率 = 例次 / 总人数
      *  debug:                  调试模式
     */
 
@@ -64,6 +66,7 @@
     %let format_rate             = %upcase(%sysfunc(strip(%bquote(&format_rate))));
     %let format_p                = %upcase(%sysfunc(strip(%bquote(&format_p))));
     %let significance_marker     = %sysfunc(strip(%bquote(&significance_marker)));
+    %let output_time_rate        = %upcase(%sysfunc(strip(%bquote(&output_time_rate))));
     %let debug                   = %upcase(%sysfunc(strip(%bquote(&debug))));
 
     /*参数预处理*/
@@ -264,7 +267,8 @@
                     &aedecod._G&i._TIME num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例次）%str(%')),
                     G&i._FREQ           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数%str(%')),
                     G&i._TIME           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')),
-                    G&i._RATE           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-率%str(%')),
+                    G&i._FREQ_RATE      num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数率%str(%')),
+                    G&i._TIME_RATE      num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次率%str(%')),
                 %end;
                 &aesoc._ALL_FREQ        num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例数）%str(%')),
                 &aesoc._ALL_TIME        num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例次）%str(%')),
@@ -272,7 +276,8 @@
                 &aedecod._ALL_TIME      num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例次）%str(%')),
                 ALL_FREQ                num(8)                                label = %unquote(%str(%')合计-例数%str(%')),
                 ALL_TIME                num(8)                                label = %unquote(%str(%')合计-例次%str(%')),
-                ALL_RATE                num(8)                                label = %unquote(%str(%')合计-率%str(%'))
+                ALL_FREQ_RATE           num(8)                                label = %unquote(%str(%')合计-例数率%str(%')),
+                ALL_TIME_RATE           num(8)                                label = %unquote(%str(%')合计-例次率%str(%'))
             );
 
         %if &&&aesoc._n > 0 %then %do;
@@ -296,11 +301,11 @@
                     &aesoc._FLAG   = 0,
                     &aedecod._FLAG = 0,
                     %do i = 1 %to &arm_n;
-                        &aesoc._G&i._FREQ   = (select count(distinct &usubjid) from tmp_indata_arm_&i where not missing(&aeseq)),
-                        &aesoc._G&i._TIME   = (select count(&usubjid)          from tmp_indata_arm_&i where not missing(&aeseq)),
+                        &aesoc._G&i._FREQ = (select count(distinct &usubjid) from tmp_indata_arm_&i where not missing(&aeseq)),
+                        &aesoc._G&i._TIME = (select count(&usubjid)          from tmp_indata_arm_&i where not missing(&aeseq)),
                     %end;
-                    &aesoc._ALL_FREQ   = (select count(distinct &usubjid) from tmp_indata where not missing(&aeseq)),
-                    &aesoc._ALL_TIME   = (select count(&usubjid)          from tmp_indata where not missing(&aeseq))
+                    &aesoc._ALL_FREQ = (select count(distinct &usubjid) from tmp_indata where not missing(&aeseq)),
+                    &aesoc._ALL_TIME = (select count(&usubjid)          from tmp_indata where not missing(&aeseq))
                     ;
             update tmp_desc_at_least
                 set %do i = 1 %to &arm_n;
@@ -316,9 +321,11 @@
                     ;
             update tmp_desc_at_least
                 set %do i = 1 %to &arm_n;
-                        G&i._RATE = G&i._FREQ / &&arm_&i._subj_n,
+                        G&i._FREQ_RATE = G&i._FREQ / &&arm_&i._subj_n,
+                        G&i._TIME_RATE = G&i._TIME / &&arm_&i._subj_n,
                     %end;
-                    ALL_RATE = ALL_FREQ / &subj_n
+                    ALL_FREQ_RATE = ALL_FREQ / &subj_n,
+                    ALL_TIME_RATE = ALL_TIME / &subj_n
                     ;
             %if %superq(at_least_output_if_zero) = FALSE %then %do;
                 delete from tmp_desc_at_least where ALL_FREQ = 0;
@@ -351,9 +358,11 @@
                 ;
         update tmp_desc_arm
             set %do i = 1 %to &arm_n;
-                    G&i._RATE = G&i._FREQ / &&arm_&i._subj_n,
+                    G&i._FREQ_RATE = G&i._FREQ / &&arm_&i._subj_n,
+                    G&i._TIME_RATE = G&i._TIME / &&arm_&i._subj_n,
                 %end;
-                ALL_RATE = ALL_FREQ / &subj_n
+                ALL_FREQ_RATE = ALL_FREQ / &subj_n,
+                ALL_TIME_RATE = ALL_TIME / &subj_n
                 ;
     quit;
 
@@ -466,13 +475,25 @@
                       end)
                 end)                                                                                       as ITEM          label = "项目",
                 %do i = 1 %to &arm_n;
-                    kstrip(put(G&i._RATE, &format_rate))                                                   as G&i._RATE_FMT label = %unquote(%str(%')%superq(arm_&i)-率（C）%str(%')),
-                    kstrip(put(G&i._FREQ, &format_freq)) || "(" || kstrip(calculated G&i._RATE_FMT) || ")" as G&i._VALUE1   label = %unquote(%str(%')%superq(arm_&i)-例数（率）%str(%')),
-                    kstrip(put(G&i._TIME, &format_freq))                                                   as G&i._VALUE2   label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')),
+                    kstrip(put(G&i._FREQ_RATE, &format_rate))                                                       as G&i._FREQ_RATE_FMT label = %unquote(%str(%')%superq(arm_&i)-例数率（C）%str(%')),
+                    kstrip(put(G&i._FREQ, &format_freq)) || "(" || kstrip(calculated G&i._FREQ_RATE_FMT) || ")"     as G&i._VALUE1        label = %unquote(%str(%')%superq(arm_&i)-例数（率）%str(%')),
+                    %if &output_time_rate = TRUE %then %do;
+                        kstrip(put(G&i._TIME_RATE, &format_rate))                                                   as G&i._TIME_RATE_FMT label = %unquote(%str(%')%superq(arm_&i)-例次率（C）%str(%')) %bquote(,)
+                        kstrip(put(G&i._TIME, &format_freq)) || "(" || kstrip(calculated G&i._TIME_RATE_FMT) || ")" as G&i._VALUE2        label = %unquote(%str(%')%superq(arm_&i)-例次（率）%str(%'))  %bquote(,)
+                    %end;
+                    %else %do;
+                        kstrip(put(G&i._TIME, &format_freq))                                                        as G&i._VALUE2        label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')) %bquote(,)
+                    %end;
                 %end;
-                kstrip(put(ALL_RATE, &format_rate))                                                        as ALL_RATE_FMT  label = %unquote(%str(%')合计-率（C）%str(%')),
-                kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_RATE_FMT) || ")"       as ALL_VALUE1    label = %unquote(%str(%')合计-例数（率）%str(%')),
-                kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2    label = %unquote(%str(%')合计-例次%str(%'))
+                kstrip(put(ALL_FREQ_RATE, &format_rate))                                                            as ALL_FREQ_RATE_FMT  label = %unquote(%str(%')合计-例数率（C）%str(%')),
+                kstrip(put(ALL_FREQ, &format_freq)) || "(" || kstrip(calculated ALL_FREQ_RATE_FMT) || ")"           as ALL_VALUE1         label = %unquote(%str(%')合计-例数（率）%str(%')),
+                %if &output_time_rate = TRUE %then %do;
+                    kstrip(put(ALL_TIME_RATE, &format_rate))                                                        as ALL_TIME_RATE_FMT  label = %unquote(%str(%')合计-例次率（C）%str(%')) %bquote(,)
+                    kstrip(put(ALL_TIME, &format_freq)) || "(" || kstrip(calculated ALL_TIME_RATE_FMT) || ")"       as ALL_VALUE2         label = %unquote(%str(%')合计-例次（率）%str(%'))
+                %end;
+                %else %do;
+                    kstrip(put(ALL_TIME, &format_freq))                                                        as ALL_VALUE2        label = %unquote(%str(%')合计-例次%str(%'))
+                %end;
                 %if &PVALUE_AVALIABLE = TRUE %then %do;
                     %bquote(,)
                     ifc(not missing(PVALUE), kstrip(put(PVALUE, &format_p)) || ifc(. < PVALUE < 0.05, "&significance_marker", ""), "")
