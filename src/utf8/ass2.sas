@@ -43,7 +43,7 @@
      *  format_rate:            率的输出格式
      *  format_p:               p 值的输出格式
      *  significance_marker:    p 值 < 0.05 的标记字符
-     *  output_time_rate:       输出例次率，例次率 = 例次 / 总人数
+     *  output_time_rate:       输出例次率，例次率 = 例次 / 总例数
      *  debug:                  调试模式
     */
 
@@ -366,7 +366,7 @@
                 ;
     quit;
 
-    /*合并 <tmp_desc_at_least> 和 tmp_desc_arm*/
+    /*合并 tmp_desc_at_least 和 tmp_desc_arm*/
     data tmp_desc;
         SEQ = _n_;
         set %if %superq(at_least) = TRUE %then %do;

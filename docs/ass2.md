@@ -448,12 +448,12 @@ significance_marker = %str(*)
 
 #### debug
 
+**Syntax** : `true` | `false`
+
 指定是否删除中间过程生成的数据集。
+
+**Default** : `false`
 
 > [!NOTE]
 >
 > 这是一个用于开发者调试的参数，通常不需要关注。
-
-**Syntax** : `true` | `false`
-
-**Default** : `false`
