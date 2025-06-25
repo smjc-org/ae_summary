@@ -25,7 +25,7 @@
 - [at_least](#at_least)
 - [at_least_text](#at_least_text)
 - [at_least_output_if_zero](#at_least_output_if_zero)
-- [unencoded_text]()
+- [unencoded_text](#unencoded_text)
 - [hypothesis](#hypothesis)
 - [format_freq](#format_freq)
 - [format_rate](#format_rate)
