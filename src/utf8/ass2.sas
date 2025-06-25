@@ -2,7 +2,7 @@
  * Macro Name:    ass2
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
- * Version Date:  2025-06-17
+ * Version Date:  2025-06-25
 */
 
 %macro ass2(indata,
