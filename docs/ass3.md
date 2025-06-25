@@ -373,6 +373,11 @@ at_least_output_if_zero = true
 
 指定当出现未编码的不良事件（[aesoc](#aesoc) 或 [aedecod](#aedecod) 缺失）时，[outdata](#outdata) 显示的替代字符串。
 
+> [!IMPORTANT]
+>
+> - [aesoc](#aesoc) 的 `未编码` 条目的汇总结果将在输出在 [outdata](#outdata) 的最后一行
+> - [aedecod](#aedecod) 的 `未编码` 条目的汇总结果将输出在 [outdata](#outdata) 中对应 [aesoc](#aesoc) 内的最后一行
+
 **Default** : `未编码`
 
 **Usage** :
