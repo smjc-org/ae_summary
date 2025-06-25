@@ -2,7 +2,7 @@
  * Macro Name:    ass2
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
- * Version Date:  2025-06-17
+ * Version Date:  2025-06-25
 */
 
 %macro ass2(indata,
@@ -255,29 +255,31 @@
     proc sql noprint;
         create table tmp_base
             (
-                AT_LEAST                char(%length(%superq(at_least_text))) label = %unquote(%str(%')%superq(at_least_text)%str(%')),
-                &aesoc                  char(&&&aesoc._len_max)               label = %unquote(%str(%')%superq(&aesoc._label)%str(%')),
-                &aesoc._FLAG            num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（FLAG）%str(%')),
-                &aedecod                char(&&&aedecod._len_max)             label = %unquote(%str(%')%superq(&aedecod._label)%str(%')),
-                &aedecod._FLAG          num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（FLAG）%str(%')),
+                AT_LEAST                 char(%length(%superq(at_least_text))) label = %unquote(%str(%')%superq(at_least_text)%str(%')),
+                &aesoc                   char(&&&aesoc._len_max)               label = %unquote(%str(%')%superq(&aesoc._label)%str(%')),
+                &aesoc._FLAG             num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（FLAG）%str(%')),
+                &aesoc._UNENCODED_FLAG   num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)-未编码（FLAG）%str(%')),
+                &aedecod                 char(&&&aedecod._len_max)             label = %unquote(%str(%')%superq(&aedecod._label)%str(%')),
+                &aedecod._FLAG           num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（FLAG）%str(%')),
+                &aedecod._UNENCODED_FLAG num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)-未编码（FLAG）%str(%')),
                 %do i = 1 %to &arm_n;
-                    &aesoc._G&i._FREQ   num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例数）%str(%')),
-                    &aesoc._G&i._TIME   num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例次）%str(%')),
-                    &aedecod._G&i._FREQ num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例数）%str(%')),
-                    &aedecod._G&i._TIME num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例次）%str(%')),
-                    G&i._FREQ           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数%str(%')),
-                    G&i._TIME           num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')),
-                    G&i._FREQ_RATE      num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数率%str(%')),
-                    G&i._TIME_RATE      num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次率%str(%')),
+                    &aesoc._G&i._FREQ    num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例数）%str(%')),
+                    &aesoc._G&i._TIME    num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（%superq(arm_&i)-例次）%str(%')),
+                    &aedecod._G&i._FREQ  num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例数）%str(%')),
+                    &aedecod._G&i._TIME  num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（%superq(arm_&i)-例次）%str(%')),
+                    G&i._FREQ            num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数%str(%')),
+                    G&i._TIME            num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次%str(%')),
+                    G&i._FREQ_RATE       num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例数率%str(%')),
+                    G&i._TIME_RATE       num(8)                                label = %unquote(%str(%')%superq(arm_&i)-例次率%str(%')),
                 %end;
-                &aesoc._ALL_FREQ        num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例数）%str(%')),
-                &aesoc._ALL_TIME        num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例次）%str(%')),
-                &aedecod._ALL_FREQ      num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例数）%str(%')),
-                &aedecod._ALL_TIME      num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例次）%str(%')),
-                ALL_FREQ                num(8)                                label = %unquote(%str(%')合计-例数%str(%')),
-                ALL_TIME                num(8)                                label = %unquote(%str(%')合计-例次%str(%')),
-                ALL_FREQ_RATE           num(8)                                label = %unquote(%str(%')合计-例数率%str(%')),
-                ALL_TIME_RATE           num(8)                                label = %unquote(%str(%')合计-例次率%str(%'))
+                &aesoc._ALL_FREQ         num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例数）%str(%')),
+                &aesoc._ALL_TIME         num(8)                                label = %unquote(%str(%')%superq(&aesoc._label)（合计-例次）%str(%')),
+                &aedecod._ALL_FREQ       num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例数）%str(%')),
+                &aedecod._ALL_TIME       num(8)                                label = %unquote(%str(%')%superq(&aedecod._label)（合计-例次）%str(%')),
+                ALL_FREQ                 num(8)                                label = %unquote(%str(%')合计-例数%str(%')),
+                ALL_TIME                 num(8)                                label = %unquote(%str(%')合计-例次%str(%')),
+                ALL_FREQ_RATE            num(8)                                label = %unquote(%str(%')合计-例数率%str(%')),
+                ALL_TIME_RATE            num(8)                                label = %unquote(%str(%')合计-例次率%str(%'))
             );
 
         %if &&&aesoc._n > 0 %then %do;
@@ -290,6 +292,9 @@
                 %end;
                 ;
         %end;
+
+        update tmp_base set &aesoc._UNENCODED_FLAG   = ifn(&aesoc   = %unquote(%str(%')%superq(unencoded_text)%str(%')), 1, 0);
+        update tmp_base set &aedecod._UNENCODED_FLAG = ifn(&aedecod = %unquote(%str(%')%superq(unencoded_text)%str(%')), 1, 0);
     quit;
 
     /*统计至少发生一次不良事件的例数和例次*/
@@ -507,11 +512,13 @@
         create table tmp_summary_formated_sorted as
             select * from tmp_summary_formated
             order by &aesoc._FLAG,
+                     &aesoc._UNENCODED_FLAG,
                      %do i = 1 %to &sort_by_part_n;
                          &aesoc._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
                      %end;
                      &aesoc,
                      &aedecod._FLAG,
+                     &aedecod._UNENCODED_FLAG,
                      %do i = 1 %to &sort_by_part_n;
                          &aedecod._&&sort_by_part_&i._arm._&&sort_by_part_&i._stat &&sort_by_part_&i._direction,
                      %end;
