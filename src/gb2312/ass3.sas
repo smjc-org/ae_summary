@@ -563,7 +563,7 @@
     quit;
 
     /*≈≈–Ú*/
-    proc sql noprint sortseq = linguistic;
+    proc sql noprint;
         create table tmp_summary_formated_sorted as
             select * from tmp_summary_formated
             order by &aesoc._FLAG,
