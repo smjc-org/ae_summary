@@ -1,0 +1,7 @@
+1. base 文件夹，存放一些基础宏，例如：base_sort_by, base_qualify, base_quantify, base_clear
+2. summary 文件夹，针对特定表格定制，例如：summary_dv, summary_ae, summary_ae_soc_pt, summary_ae_soc_pt_sev
+
+base_sort_by: 输入排序方式，输出一些宏变量，这些宏变量需要提前在上一层宏中定义
+base_clear_macro_var: 清除 base_xxx 宏生成的宏变量，每次高级宏调用结束前，必须调用一次 %base_clear_macro_var
+
+base_xxx 生成的宏变量需要记录在 base_macro_var_list 中，这样 base_clear 读取这个列表就可以知道哪些宏变量需要被清除
