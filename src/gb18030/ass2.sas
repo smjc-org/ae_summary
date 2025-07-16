@@ -35,7 +35,7 @@
      *  arm:                    变量-试验组别，#null 表示单组
      *  arm_by:                 变量-试验组别的排序方式，可能的取值有：数值型变量、输出格式、#null，#null 表示单组
      *  sort_by:                汇总结果数据集中观测的排序方式，详细语法参考帮助文档
-     *  sort_linguistic:        是否在排序时遵循当前区域设置和默认排序规则
+     *  sort_linguistic:        是否在排序时遵循当前区域设置的默认 collating sequence 选项
      *  at_least:               是否在汇总结果数据集的第一行输出至少发生一次不良事件的统计结果
      *  at_least_text:          at_least = true 时，汇总结果数据集的第一行显示的描述性文本
      *  at_least_output_if_zero 当至少发生一次不良事件的合计例数为零时，是否仍然在汇总结果数据集中输出
