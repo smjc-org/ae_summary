@@ -24,6 +24,7 @@
 - [arm](#arm)
 - [arm_by](#arm_by)
 - [sort_by](#sort_by)
+- [sort_linguistic](#sort_linguistic)
 - [at_least](#at_least)
 - [at_least_text](#at_least_text)
 - [at_least_output_if_zero](#at_least_output_if_zero)
@@ -317,6 +318,22 @@ arm_by = armn.
 
 ```sas
 sort_by = %str(#G1#FREQ(desc) #G1#TIME(desc) #G2#FREQ(desc) #G2#TIME(desc))
+```
+
+---
+
+#### sort_linguistic
+
+**Syntax** : `true` | `false`
+
+指定是否在排序时遵循当前区域设置和默认排序规则。
+
+**Default** : `true`
+
+**Usage** :
+
+```sas
+sort_linguistic = false
 ```
 
 ---
