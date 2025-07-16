@@ -2,7 +2,7 @@
  * Macro Name:    ass3
  * Macro Purpose: 不良事件汇总
  * Author:        wtwang
- * Version Date:  2025-06-25
+ * Version Date:  2025-07-16
 */
 
 %macro ass3(indata,
@@ -16,6 +16,7 @@
             arm                     = #null,
             arm_by                  = %nrstr(&arm),
             sort_by                 = %str(#FREQ(desc) #TIME(desc)),
+            sort_linguistic         = true,
             at_least                = true,
             at_least_text           = %str(至少发生一次AE),
             at_least_output_if_zero = false,
@@ -38,6 +39,7 @@
      *  arm:                    变量-试验组别，#null 表示单组
      *  arm_by:                 变量-试验组别的排序方式，可能的取值有：数值型变量、输出格式、#null，#null 表示单组
      *  sort_by:                汇总结果数据集中观测的排序方式，详细语法参考帮助文档
+     *  sort_linguistic:        是否在排序时遵循当前区域设置的默认 collating sequence 选项
      *  at_least:               是否在汇总结果数据集的第一行输出至少发生一次不良事件的统计结果
      *  at_least_text:          at_least = true 时，汇总结果数据集的第一行显示的描述性文本
      *  at_least_output_if_zero 当至少发生一次不良事件的合计例数为零时，是否仍然在汇总结果数据集中输出
@@ -63,6 +65,7 @@
     %let arm                     = %upcase(%sysfunc(strip(%bquote(&arm))));
     %let arm_by                  = %upcase(%sysfunc(strip(%bquote(&arm_by))));
     %let sort_by                 = %upcase(%sysfunc(strip(%bquote(&sort_by))));
+    %let sort_linguistic         = %upcase(%sysfunc(strip(%bquote(&sort_linguistic))));
     %let at_least                = %upcase(%sysfunc(strip(%bquote(&at_least))));
     %let at_least_text           = %sysfunc(strip(%superq(at_least_text)));
     %let at_least_output_if_zero = %upcase(%sysfunc(strip(%bquote(&at_least_output_if_zero))));
@@ -563,7 +566,7 @@
     quit;
 
     /*排序*/
-    proc sql noprint;
+    proc sql noprint %if %bquote(&sort_linguistic) = %upcase(true) %then %do; sortseq = linguistic %end;;
         create table tmp_summary_formated_sorted as
             select * from tmp_summary_formated
             order by &aesoc._FLAG,

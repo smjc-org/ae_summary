@@ -24,6 +24,7 @@
 - [arm](#arm)
 - [arm_by](#arm_by)
 - [sort_by](#sort_by)
+- [sort_linguistic](#sort_linguistic)
 - [at_least](#at_least)
 - [at_least_text](#at_least_text)
 - [at_least_output_if_zero](#at_least_output_if_zero)
@@ -317,6 +318,26 @@ arm_by = armn.
 
 ```sas
 sort_by = %str(#G1#FREQ(desc) #G1#TIME(desc) #G2#FREQ(desc) #G2#TIME(desc))
+```
+
+---
+
+#### sort_linguistic
+
+**Syntax** : `true` | `false`
+
+指定是否在排序时遵循当前区域设置的默认 collating sequence 选项。
+
+> [!NOTE]
+>
+> 指定 `sort_linguistic = true` 相当于指定了 `PROC SQL` 语句的 [SORTSEQ = LINGUISTIC](https://documentation.sas.com/doc/zh-CN/pgmsascdc/9.4_3.5/sqlproc/p12ohgh32ffm6un13s7l2d5p9c8y.htm#p0i5z6z3vnmjd2n1abnsp9p3bc05) 选项。
+
+**Default** : `true`
+
+**Usage** :
+
+```sas
+sort_linguistic = false
 ```
 
 ---
